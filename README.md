@@ -14,4 +14,4 @@ The compression algorithm is as follows:
    - Length of cube side.
    - Number of bits used for representing compression block size.
    
-![image](https://user-images.githubusercontent.com/25268629/186465052-73642004-8b17-411b-8580-27b406d5f7a2.png)
+![image](https://user-images.githubusercontent.com/25268629/186506645-167d0d83-bc1b-41d3-93d7-626565fcd84c.png)
