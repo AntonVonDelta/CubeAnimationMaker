@@ -26,21 +26,6 @@ $(document).ready(function () {
 	loadAnimation();
 	updateUI(cube_side);
 
-	$("#insert_frame").click(function () {
-		var frame = getFrame(cube_side);
-		animation.splice(frame_cursor, 0, frame);
-		console.log(frame);
-
-		frame_cursor += 1;
-		updateUI();
-	});
-
-	$("#frame_range").change(function () {
-		var new_value = parseInt($(this).val());
-		frame_cursor = new_value;
-		updateUI(cube_side);
-	});
-
 	$(".grid_cell").click(function (e) {
 		$(this).button("toggle");
 		console.log($(this).attr("data-col"));
@@ -56,21 +41,51 @@ $(document).ready(function () {
 
 
 
+	$("#insert_frame").click(function () {
+		var frame = getFrame(cube_side);
+		animation.splice(frame_cursor, 0, frame);
+		console.log(frame);
+
+		frame_cursor += 1;
+		updateUI();
+	});
+	$("#update_frame").click(function () {
+		if (frame_cursor - animation.length >= 0) {
+			alert("Frame #" + frame_id + " doesn't exist");
+			return;
+		}
+		animation.splice(frame_cursor, 1, getFrame(cube_side));
+		updateUI(cube_side);
+	});
+	$("#refresh_frame").click(function () {
+		updateUI(cube_side);
+	});
+	$("#delete_frame").click(function () {
+		if (frame_cursor - animation.length >= 0) {
+			return;
+		}
+		animation.splice(frame_cursor, 1);
+		updateUI(cube_side);
+	});
 	$("#btn1").click(function () {
 		$("#txt1").text(compress(animation).join());
 	});
 	$("#seek_frame").click(function () {
 		var frame_id = parseInt($("#seek_frame_id").val());
-		if (frame_id + 1 > animation.length) {
+		if (frame_id - animation.length >= 0) {
 			alert("Frame #" + frame_id + " doesn't exist");
-		} else {
-			frame_cursor = frame_id;
-			updateUI();
+			return;
 		}
+		frame_cursor = frame_id;
+		updateUI(cube_side);
 	});
 
 
-
+	$("#frame_range").on("input change",function () {
+		var new_value = parseInt($(this).val());
+		frame_cursor = new_value;
+		updateUI(cube_side);
+	});
 
 
 	$("#download_animation").click(function () {
@@ -104,17 +119,29 @@ $(document).ready(function () {
 // Updates the UI based on current data
 function updateUI(sides) {
 	loadCurrentFrame(sides);
-	$("#frames_counter").text("Current frame: " + (frame_cursor) + " / " + (animation.length - 1) + "");
 
-	$("#frame_range").val(frame_cursor);
+	if (frame_cursor - animation.length == 0) {
+		// The cursor is over the new frame position
+		$("#frames_counter").text("Current frame: new / " + (animation.length - 1) + "");
+	} else {
+		$("#frames_counter").text("Current frame: " + (frame_cursor) + " / " + (animation.length - 1) + "");
+	}
+
 	$("#frame_range").attr("min", 0);
-	$("#frame_range").attr("max", animation.length - 1);
+	$("#frame_range").attr("max", animation.length - 1 + 1);	// We actually add a new frame position here to the range. This represents the new frame position
+	$("#frame_range").val(frame_cursor);
 }
 
 // Modifies the ui according to current frame and animation
 function loadCurrentFrame(sides) {
-	if (frame_cursor + 1 > animation.length) {
-		// No frames exist
+	if (frame_cursor - animation.length > 0) {
+		// This means the cursor is 2 frames too many after the end of the animation
+		// This should not happen
+		alert("Error. See logs");
+		throw "Frame cursor points beyond event the new frame position";
+	}
+	if (frame_cursor - animation.length == 0) {
+		// The cursor is over the new frame position
 		// Clear ui
 		$("#frame_duration").val(default_duration);
 		$(".grid_cell").removeClass("active");

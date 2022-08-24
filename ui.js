@@ -1,4 +1,3 @@
-
 function getFrame(sides) {
 	var duration = $("#frame_duration").val();
 	if (duration == "") duration = "0";
