@@ -1,12 +1,22 @@
 
 var use_between_frames_compression = true;
 const compression_block_size_bits = 4;	// How many bits describe the compression block. This sets the max size of a compression block = 2^n-1
+const metadata_size_bits = 5;				// How many bits are used to describe metadata
 
-// Flattens the planes XcolsXrowsX1bit structure
-function flattenPlane(frame) {
-	return frame.state.flat().flat();
+// Adds duration metadata or anything else to the compressed stream
+function compressWithMetadata(animation) {
+	var result = [];
+	var compressed_binary = compress(animation);
+
+	for (var i = 0; i < animation.length; i++) {
+		var metadata = animation[i].duration;
+		result.push(compressed_binary[i].concat(intToBitArray(metadata, metadata_size_bits)));
+	}
+	return result;
 }
 
+// Compress all animation frames
+// Returns 2D array for each frame of binary data
 function compress(animation) {
 	if (animation.length == 0) return [];
 
@@ -74,4 +84,52 @@ function intToBitArray(nr, bits) {
 		result.push((nr >> i) & 1);
 	}
 	return result;
+}
+
+// Returns a DWORD condensed array
+// Little endian
+function condenseBinary(arr) {
+	var result = [];
+
+	for (var i = 0; i < Math.floor(arr.length / 32); i++) {
+		var dword = 0;
+		for (var j = 0; j < 32; j++) {
+			dword += arr[i * 32 + j] * (1 << j);
+		}
+		result.push(dword);
+	}
+
+	// Remaining bits
+	if (arr.length % 32 != 0) {
+		var dword = 0;
+		for (var j = 0; j < 32; j++) {
+			var bit_id = Math.floor(arr.length / 32) * 32 + j;
+			if (bit_id >= arr.length) continue;
+			dword += arr[bit_id] * (1 << j);
+		}
+		result.push(dword);
+	}
+	return result;
+}
+
+// Flattens the planes XcolsXrowsX1bit structure
+function flattenPlane(frame) {
+	return frame.state.flat().flat();
+}
+
+function compressionRatio(sides, animation, compressed_binary) {
+	// A good algorithm for displaying the cube would use the same ideea as I did.
+	// It would compactify the numbers into dword numbers to preserve instruction calls.
+	var estimate_binary_uncompressed = animation.length * (sides * sides * sides + metadata_size_bits);
+	var estimate_bytes_uncompressed = Math.ceil(estimate_binary_uncompressed / 8);
+	var compressed_bytes = Math.ceil(compressed_binary.length / 8);
+	return (compressed_bytes / estimate_bytes_uncompressed * 100).toFixed(2);
+}
+
+function compressionRatioLCCG(sides, animation, compressed_binary) {
+	// LCCG is VERY ineficient. It uses 32bit dwords to store just 4bits at a time.
+	var estimate_binary_uncompressed = animation.length * (sides * sides * 32 + 32);
+	var estimate_bytes_uncompressed = Math.ceil(estimate_binary_uncompressed / 8);
+	var compressed_bytes = Math.ceil(compressed_binary.length / 8);
+	return (compressed_bytes / estimate_bytes_uncompressed * 100).toFixed(2);
 }

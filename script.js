@@ -67,8 +67,13 @@ $(document).ready(function () {
 		animation.splice(frame_cursor, 1);
 		updateUI(cube_side);
 	});
-	$("#btn1").click(function () {
-		$("#txt1").text(compress(animation).join());
+	$("#generate_compress").click(function () {
+		var compressed_binary = compressWithMetadata(animation).flat();
+		var condensed_dwords = condenseBinary(compressed_binary);
+		var result = "unsinged long animation[]={" + condensed_dwords.join() + "};";
+		$("#output").text(result);
+		$("#compression_ratio").text(compressionRatio(cube_side, animation, compressed_binary) + "%");
+		$("#compression_ratio_lccg").text(compressionRatioLCCG(cube_side, animation, compressed_binary) + "%");
 	});
 	$("#seek_frame").click(function () {
 		var frame_id = parseInt($("#seek_frame_id").val());
@@ -81,7 +86,7 @@ $(document).ready(function () {
 	});
 
 
-	$("#frame_range").on("input change",function () {
+	$("#frame_range").on("input change", function () {
 		var new_value = parseInt($(this).val());
 		frame_cursor = new_value;
 		updateUI(cube_side);

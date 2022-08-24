@@ -61,12 +61,19 @@
 
 		<div class="btn-toolbar mt-5" role="toolbar">
 			<div class="btn-group me-2" role="group">
-				<button id="btn1" type="button" class="btn btn-success">Generate and Compress</button>
+				<button id="generate_compress" type="button" class="btn btn-success">Generate and Compress</button>
 			</div>
 		</div>
 		<div class="form-floating mt-1">
-			<textarea id="txt1" class="form-control" style="height: 100px" readonly></textarea>
+			<textarea id="output" class="form-control" style="height: 100px" readonly></textarea>
 		</div>
+		<div>
+			<span class="d-block">Compression ratio (percent of uncompressed animation): <label
+					id="compression_ratio"></label></span>
+			<span class="d-block">Compression ratio compared to lccg(percent of uncompressed animation): <label
+					id="compression_ratio_lccg"></label></span>
+		</div>
+
 
 		<div class="btn-toolbar mt-4" role="toolbar">
 			<div class="btn-group me-2" role="group">
