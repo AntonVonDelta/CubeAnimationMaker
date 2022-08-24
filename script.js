@@ -70,7 +70,11 @@ $(document).ready(function () {
 	$("#generate_compress").click(function () {
 		var compressed_binary = compressWithMetadata(animation).flat();
 		var condensed_dwords = condenseBinary(compressed_binary);
-		var result = "unsinged long animation[]={" + condensed_dwords.join() + "};";
+		var formatted_list = condensed_dwords.map(x => x + "UL");
+		var result = "unsigned long animation[]={" + formatted_list.join() + "};";
+
+		console.log(compressed_binary);
+
 		$("#output").text(result);
 		$("#compression_ratio").text(compressionRatio(cube_side, animation, compressed_binary) + "%");
 		$("#compression_ratio_lccg").text(compressionRatioLCCG(cube_side, animation, compressed_binary) + "%");

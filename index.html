@@ -67,11 +67,12 @@
 		<div class="form-floating mt-1">
 			<textarea id="output" class="form-control" style="height: 100px" readonly></textarea>
 		</div>
-		<div>
-			<span class="d-block">Compression ratio (percent of uncompressed animation): <label
-					id="compression_ratio"></label></span>
-			<span class="d-block">Compression ratio compared to lccg(percent of uncompressed animation): <label
-					id="compression_ratio_lccg"></label></span>
+		<div class="mt-2">
+			<h5 class="d-block">Compression Efficiency (percent of uncompressed animation):</h5>
+			<ul class="list-group list-group-horizontal">
+				<li class="list-group-item">No compression: <label id="compression_ratio"></label></li>
+				<li class="list-group-item">LCCG generator: <label id="compression_ratio_lccg"></label></li>
+			</ul>
 		</div>
 
 

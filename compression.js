@@ -1,18 +1,30 @@
-
 var use_between_frames_compression = true;
-const compression_block_size_bits = 4;	// How many bits describe the compression block. This sets the max size of a compression block = 2^n-1
-const metadata_size_bits = 5;				// How many bits are used to describe metadata
+var debug = true;
+
+// How many bits describe the compression block. This sets the max size of a compression block = 2^n-1
+// Max 8bits. Max compression block 255bits (we loose the value 0)
+const compression_block_size_bits = 4;
+
+// How many bits are used to describe metadata
+// Max 8bits.
+const metadata_size_bits = 5;
 
 // Adds duration metadata or anything else to the compressed stream
 function compressWithMetadata(animation) {
 	var result = [];
 	var compressed_binary = compress(animation);
+	var bits_offset = 0;
 
 	for (var i = 0; i < animation.length; i++) {
 		var metadata = animation[i].duration;
 		result.push(compressed_binary[i].concat(intToBitArray(metadata, metadata_size_bits)));
+
+		if (debug) {
+			console.log("Frame " + i + "; starts: " + bits_offset + "; size: " + result.at(-1).length);
+			bits_offset += result.at(-1).length;
+		}
 	}
-	return result;
+	return intToBitArray(animation.length, 32).concat(result);
 }
 
 // Compress all animation frames
@@ -81,7 +93,7 @@ function intToBitArray(nr, bits) {
 	if (nr < 0 || nr > Math.pow(2, bits) - 1) throw "Number too large";
 
 	for (var i = 0; i < bits; i++) {
-		result.push((nr >> i) & 1);
+		result.push((nr >>> i) & 1);
 	}
 	return result;
 }
@@ -94,7 +106,7 @@ function condenseBinary(arr) {
 	for (var i = 0; i < Math.floor(arr.length / 32); i++) {
 		var dword = 0;
 		for (var j = 0; j < 32; j++) {
-			dword += arr[i * 32 + j] * (1 << j);
+			dword += arr[i * 32 + j] * ((1 << j) >>> 0);
 		}
 		result.push(dword);
 	}
@@ -105,7 +117,7 @@ function condenseBinary(arr) {
 		for (var j = 0; j < 32; j++) {
 			var bit_id = Math.floor(arr.length / 32) * 32 + j;
 			if (bit_id >= arr.length) continue;
-			dword += arr[bit_id] * (1 << j);
+			dword += arr[bit_id] * ((1 << j) >>> 0);
 		}
 		result.push(dword);
 	}
@@ -127,8 +139,8 @@ function compressionRatio(sides, animation, compressed_binary) {
 }
 
 function compressionRatioLCCG(sides, animation, compressed_binary) {
-	// LCCG is VERY ineficient. It uses 32bit dwords to store just 4bits at a time.
-	var estimate_binary_uncompressed = animation.length * (sides * sides * 32 + 32);
+	// LCCG is very ineficient. It uses 8bit to store just 4bits at a time.
+	var estimate_binary_uncompressed = animation.length * (sides * sides * 8 + 8);
 	var estimate_bytes_uncompressed = Math.ceil(estimate_binary_uncompressed / 8);
 	var compressed_bytes = Math.ceil(compressed_binary.length / 8);
 	return (compressed_bytes / estimate_bytes_uncompressed * 100).toFixed(2);
