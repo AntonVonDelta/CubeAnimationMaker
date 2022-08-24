@@ -1,0 +1,13 @@
+.template {
+	display:none;
+	
+}
+
+.box{
+	padding: 1.5rem;
+	margin-right: 0;
+	margin-left: 0;
+	border-top-left-radius: .25rem;
+	border-top-right-radius: .25rem;
+	border: solid 1px #dee2e6;
+}
