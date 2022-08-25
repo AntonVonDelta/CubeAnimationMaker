@@ -1,4 +1,4 @@
-const debug = true;
+const debug = false;
 
 /* 	Algo ideea:
 		Get the difference between two frames. Many animations share similar consecutive frames.
