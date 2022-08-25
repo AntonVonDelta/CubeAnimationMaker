@@ -1,4 +1,4 @@
-const debug = false;
+const debug = true;
 
 /* 	Algo ideea:
 		Get the difference between two frames. Many animations share similar consecutive frames.
@@ -54,7 +54,8 @@ function compressWithMetadata(animation) {
 	}
 
 	// Add metadata to animation
-	return intToBitArray(animation.frames.length, 32).concat(result);
+	var compression_algo = animation.use_block_compression + (animation.use_frames_subtraction << 1);
+	return intToBitArray(animation.frames.length, 32).concat(intToBitArray(compression_algo, 32)).concat(result);
 }
 
 // Compress all animation frames
@@ -62,31 +63,37 @@ function compressWithMetadata(animation) {
 function compress(animation) {
 	if (animation.frames.length == 0) return [];
 
-	var compressed_between_frames = [flattenPlane(animation.frames[0])];
+	var compressed_between_frames = [getOrientedFrameData(animation.cube_side, animation.frames[0])];
 	for (var i = 1; i < animation.frames.length; i++) {
 		if (animation.use_frames_subtraction) {
-			compressed_between_frames.push(compressConsecutiveFrames(flattenPlane(animation.frames[i - 1]), flattenPlane(animation.frames[i])));
+			compressed_between_frames.push(compressConsecutiveFrames(animation.cube_side, animation.frames[i - 1], animation.frames[i]));
 		} else {
-			compressed_between_frames.push(flattenPlane(animation.frames[i]));
+			compressed_between_frames.push(getOrientedFrameData(animation.cube_side, animation.frames[i]));
 		}
 	}
 
 	var compressed_frames = [];
-	for (var i = 0; i < compressed_between_frames.length; i++) {
-		compressed_frames.push(compressFrame(compressed_between_frames[i]));
-	}
+	if (animation.use_block_compression) {
+		for (var i = 0; i < compressed_between_frames.length; i++) {
+			compressed_frames.push(compressFrame(compressed_between_frames[i]));
+		}
+	} else compressed_frames = compressed_between_frames;
+
 	return compressed_frames;
 }
 
 // Compress frame by xor method
 // Returns flat array
-function compressConsecutiveFrames(frame1, frame2) {
+function compressConsecutiveFrames(sides, frame1, frame2) {
 	// prev_frame x next_frame = diff_bit  | diff_bit x prev_frame = next_frame
 	// 1 x 1 = 0  | 0 x 1 = 1
 	// 0 x 1 = 1  | 1 x 0 = 1
 	// 1 x 0 = 1  | 1 x 1 = 0
 	// 0 x 0 = 0  | 0 x 0 = 0
-	return frame2.map((el, index) => el ^ frame1[index]);
+	var frame1_flat_array = getOrientedFrameData(sides, frame1);
+	var frame2_flat_array = getOrientedFrameData(sides, frame2);
+
+	return frame2_flat_array.map((el, index) => el ^ frame1_flat_array[index]);
 }
 
 // Returns compressed array
@@ -155,8 +162,36 @@ function condenseBinary(arr) {
 }
 
 // Flattens the planes XcolsXrowsX1bit structure
-function flattenPlane(frame) {
-	return frame.state.flat().flat();
+// Also applies orientation to array
+function getOrientedFrameData(sides, frame) {
+	return applyOrientation(sides, frame.orientation, frame.state.flat().flat());
+}
+
+// Apply orientation to the frame data
+function applyOrientation(sides, orientation, flat_state) {
+	var result = [];
+	if (orientation == 0) return flat_state;
+	if (orientation == 1) {
+		// Back to front
+		for (var row = sides - 1; row >= 0; row--) {
+			for (var plane = 0; plane < sides; plane++) {
+				for (var col = 0; col < sides; col++) {
+					result.push(flat_state[plane * sides * sides + row * sides + col]);
+				}
+			}
+		}
+	}
+	if (orientation == 2) {
+		// Left to right
+		for (var row = sides - 1; row >= 0; row--) {
+			for (var col = sides - 1; col >= 0; col--) {
+				for (var plane = 0; plane < sides; plane++) {
+					result.push(flat_state[plane * sides * sides + row * sides + col]);
+				}
+			}
+		}
+	}
+	return result;
 }
 
 function compressionRatio(animation, compressed_binary) {
@@ -164,6 +199,8 @@ function compressionRatio(animation, compressed_binary) {
 	// It would compactify the numbers into dword numbers to preserve instruction calls.
 	var sides = animation.cube_side;
 	var estimate_binary_uncompressed = animation.frames.length * (sides * sides * sides + metadata_size_bits);
+	estimate_binary_uncompressed += 32;	// Add frames count dword
+	estimate_binary_uncompressed += 32;	// Add animation metadata
 	var estimate_bytes_uncompressed = Math.ceil(estimate_binary_uncompressed / 8);
 	var compressed_bytes = Math.ceil(compressed_binary.length / 8);
 	return (compressed_bytes / estimate_bytes_uncompressed * 100).toFixed(2);

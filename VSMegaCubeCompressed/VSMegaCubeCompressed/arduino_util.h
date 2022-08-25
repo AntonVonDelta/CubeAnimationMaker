@@ -12,7 +12,7 @@
 #define LOW false
 
 #define pinMode(a,b);
-#define pgm_read_dword(address_short) *address_short
+#define pgm_read_dword(address_short) *(address_short)
 #define digitalWrite(a,b);
 #define delayMicroseconds(a);
 #define millis() 1

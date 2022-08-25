@@ -1,28 +1,38 @@
-//#include <avr/pgmspace.h> // allows use of PROGMEM to store patterns in flash
+#ifndef _WIN32
+#include <avr/pgmspace.h> // allows use of PROGMEM to store patterns in flash
+#else
 #include "arduino_util.h"
 #include <iostream>
 
 using namespace std;
+#endif
 
 #define CUBESIZE 4UL
 #define PLANESIZE CUBESIZE*CUBESIZE
-#define BLOCK_SIZE 4	// Compression block size
-#define META_SIZE 5		// Metadata size
+// Size in bits of compression block size
+#define BLOCK_SIZE 4	
+// Size in bits of frame meta
+#define META_SIZE 5
 // Time duration of drawing a plane in one frame (us).
 #define PLANETIME 2000
 // Time unit for all frames (ms).
 // Multiplied by the frame duration to give total time the frame is visible
 #define TIMECONST 500	
 
+enum COMPRESSION :unsigned long {
+	NONE = 0,
+	FRAME_SUBTRACTION = 1,
+	BLOCK = 2
+};
 
 void showFrame(bool* data, unsigned char metadata);
-unsigned long getFrameCount(unsigned long* animation);
-unsigned long readFrameDataAtOffset_P(unsigned long* animation, unsigned long bits_offset, bool* data, unsigned char* metadata);
-unsigned long getFrameOffset_P(unsigned long* animation, unsigned long frame_id);
-unsigned long readNumber_P(unsigned long* arr, unsigned long bits_offset, char bit_count);
+unsigned long readFrameDataAtOffset_P(const unsigned long* animation, unsigned long bits_offset, bool* data, unsigned char* metadata);
+unsigned long readNumber_P(const unsigned long* arr, unsigned long bits_offset, char bit_count);
 void addTwoFrames(bool* frame1, bool* diff_frame);
+unsigned long getFrameCount(const unsigned long* animation);
+COMPRESSION getCompression(const unsigned long* animation);
 
-const unsigned long PROGMEM animation1[] = { 4UL,1122976480UL,1122976495UL,547758111UL,547758246UL,3625459878UL,3490500620UL,1076678668UL,1587568304UL,1587568288UL,0UL };
+const unsigned long PROGMEM animation1[] = { 2UL,1122976480UL,1122976495UL,3782877215UL,1017642151UL,8570UL };
 
 int LEDPin[] = { A5, A4, 13, 12,
 				 11, 10, 9, 8,
@@ -45,9 +55,9 @@ void setup() {
 		digitalWrite(PlanePin[pin], LOW);
 	}
 }
-
 void loop() {
 	unsigned long frames_count = getFrameCount(animation1);
+	COMPRESSION compression_algo = getCompression(animation1);
 	bool buffer_a[CUBESIZE * CUBESIZE * CUBESIZE];
 	bool buffer_b[CUBESIZE * CUBESIZE * CUBESIZE];
 	unsigned char metadata = 0;
@@ -62,7 +72,7 @@ void loop() {
 		for (unsigned long frame_id = 0; frame_id < frames_count; frame_id++) {
 			bits_offset = readFrameDataAtOffset_P(animation1, bits_offset, next_frame, &metadata);
 
-			if (frame_id != 0) {
+			if (frame_id != 0 && (compression_algo & COMPRESSION::FRAME_SUBTRACTION)) {
 				// Reconstruct the next frame from the previous one
 				addTwoFrames(previous_frame, next_frame);
 			}
@@ -78,9 +88,9 @@ void loop() {
 			previous_frame = next_frame;
 			next_frame = temp;
 		}
-		break;
 	}
 }
+
 
 void showFrame(bool* data, unsigned char metadata) {
 	for (int plane = 0; plane < CUBESIZE; plane++) {
@@ -120,95 +130,57 @@ void showFrame(bool* data, unsigned char metadata) {
 	//}
 	//Serial.println(result);
 }
-
-
-// Returns number of frames in animation
-unsigned long getFrameCount(unsigned long* animation) {
-	return animation[0];
-}
-
 // Reads binary data for frame starting at the binary offset.
 // Returns bits offset for the next frame.
-unsigned long readFrameDataAtOffset_P(unsigned long* animation, unsigned long bits_offset, bool* data, unsigned char* metadata) {
-	unsigned long* start = animation + 1; // Jump over first number
+unsigned long readFrameDataAtOffset_P(const unsigned long* animation, unsigned long bits_offset, bool* data, unsigned char* metadata) {
+	const unsigned long* start = animation + 2; // Jump over frame count and metadata
+	COMPRESSION compression_algo = getCompression(animation);
 	unsigned long frame_bits_count = 0;
 
-	while (true) {
-		unsigned char compressed_block_size;
-
-		compressed_block_size = readNumber_P(start, bits_offset, BLOCK_SIZE);
-		bits_offset += BLOCK_SIZE;
-
-		if (compressed_block_size != 0) {
-			// This block was compressed
-			bool bit_value = readNumber_P(start, bits_offset++, 1);
-
-			for (unsigned char i = 0; i < compressed_block_size; i++) {
-				*(data++) = bit_value;
-				frame_bits_count++;
-			}
-		} else {
-			// This block was not compressed. Read raw data
-			unsigned long uncompressed_block_size = CUBESIZE * CUBESIZE * CUBESIZE - frame_bits_count;
-
-			for (unsigned long i = 0; i < uncompressed_block_size; i++) {
-				*(data++) = readNumber_P(start, bits_offset++, 1);
-				frame_bits_count++;
-			}
+	if (!(compression_algo & COMPRESSION::BLOCK)) {
+		for (unsigned long i = 0; i < CUBESIZE * CUBESIZE * CUBESIZE; i++) {
+			*(data++) = readNumber_P(start, bits_offset++, 1);
 		}
+	} else {
+		while (true) {
+			unsigned long block_size;
 
-		if (frame_bits_count == CUBESIZE * CUBESIZE * CUBESIZE) {
-			*metadata = readNumber_P(start, bits_offset, META_SIZE);
-			bits_offset += META_SIZE;
-			break;
+			block_size = readNumber_P(start, bits_offset, BLOCK_SIZE);
+			bits_offset += BLOCK_SIZE;
+
+			if (block_size != 0) {
+				// This block was compressed
+				bool bit_value = readNumber_P(start, bits_offset++, 1);
+				frame_bits_count += block_size;
+
+				for (unsigned char i = 0; i < block_size; i++) {
+					*(data++) = bit_value;
+				}
+			} else {
+				// This block was not compressed. Read raw data
+				block_size = CUBESIZE * CUBESIZE * CUBESIZE - frame_bits_count;
+				frame_bits_count += block_size;
+
+				for (unsigned long i = 0; i < block_size; i++) {
+					*(data++) = readNumber_P(start, bits_offset++, 1);
+				}
+			}
+
+			if (frame_bits_count == CUBESIZE * CUBESIZE * CUBESIZE) {
+				*metadata = readNumber_P(start, bits_offset, META_SIZE);
+				bits_offset += META_SIZE;
+				break;
+			}
 		}
 	}
 
 	return bits_offset;
 }
-
-// Returns bits offset for the next frame.
-unsigned long getFrameOffset_P(unsigned long* animation, unsigned long frame_id) {
-	unsigned long* start = animation + 1; // Jump over first number
-	unsigned long bits_offset = 0;
-	unsigned long frame_bits_count = 0;
-	unsigned long current_frame_id = 0;
-
-	while (true) {
-		unsigned char compressed_block_size;
-
-		if (current_frame_id == frame_id) break;
-
-		compressed_block_size = readNumber_P(start, bits_offset, BLOCK_SIZE);
-		bits_offset += BLOCK_SIZE;
-
-		if (compressed_block_size != 0) {
-			// This block was compressed
-			bool bit_value = readNumber_P(start, bits_offset++, 1);
-			frame_bits_count += compressed_block_size;
-		} else {
-			// This block was not compressed. Read raw data
-			unsigned long uncompressed_block_size = CUBESIZE * CUBESIZE * CUBESIZE - frame_bits_count;
-
-			bits_offset += uncompressed_block_size;
-			frame_bits_count += uncompressed_block_size;
-		}
-
-		if (frame_bits_count == CUBESIZE * CUBESIZE * CUBESIZE) {
-			bits_offset += META_SIZE;
-			current_frame_id++;
-			frame_bits_count = 0;
-		}
-	}
-
-	return bits_offset;
-}
-
 // Reads bit_count from arr after bits_offset and returns the number.
 // Little endian
-unsigned long readNumber_P(unsigned long* arr, unsigned long bits_offset, char bit_count) {
+unsigned long readNumber_P(const unsigned long* arr, unsigned long bits_offset, char bit_count) {
 	unsigned long dwords_offset = bits_offset / 32;
-	unsigned long* start = arr + dwords_offset;     // Jumps over multiple of dwords
+	const unsigned long* start = arr + dwords_offset;     // Jumps over multiple of dwords
 	char remaining_offset_bits = bits_offset % 32;
 	unsigned long result = 0;
 
@@ -226,7 +198,6 @@ unsigned long readNumber_P(unsigned long* arr, unsigned long bits_offset, char b
 
 	return result & ((1UL << bit_count) - 1);
 }
-
 // Adds to the parent/previous frame the difference to get the next frame.
 // The result is saved in same memory as the difference.
 void addTwoFrames(bool* frame1, bool* diff_frame) {
@@ -235,10 +206,16 @@ void addTwoFrames(bool* frame1, bool* diff_frame) {
 	}
 }
 
+// Returns number of frames in animation
+unsigned long getFrameCount(const unsigned long* animation) {
+	return pgm_read_dword(animation);
+}
+COMPRESSION getCompression(const unsigned long* animation) {
+	return (COMPRESSION)pgm_read_dword(animation + 1);
+}
 
 
-
-
+#ifdef _WIN32
 string print(bool* data) {
 	string result;
 	for (int row = 0; row < CUBESIZE; row++) {
@@ -260,3 +237,4 @@ int main() {
 
 	return 0;
 }
+#endif

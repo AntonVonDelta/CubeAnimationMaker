@@ -1,4 +1,13 @@
+#ifndef _WIN32
 #include <avr/pgmspace.h> // allows use of PROGMEM to store patterns in flash
+#else
+#include "arduino_util.h"
+#include <iostream>
+
+using namespace std;
+#endif
+
+
 
 #define CUBESIZE 4UL
 #define PLANESIZE CUBESIZE*CUBESIZE
@@ -12,13 +21,13 @@
 
 
 void showFrame(bool* data, unsigned char metadata);
-unsigned long getFrameCount(unsigned long* animation);
-unsigned long readFrameDataAtOffset_P(unsigned long* animation, unsigned long bits_offset, bool* data, unsigned char* metadata);
-unsigned long getFrameOffset_P(unsigned long* animation, unsigned long frame_id);
-unsigned long readNumber_P(unsigned long* arr, unsigned long bits_offset, char bit_count);
+unsigned long getFrameCount(const unsigned long* animation);
+unsigned long readFrameDataAtOffset_P(const unsigned long* animation, unsigned long bits_offset, bool* data, unsigned char* metadata);
+unsigned long getFrameOffset_P(const unsigned long* animation, unsigned long frame_id);
+unsigned long readNumber_P(const unsigned long* arr, unsigned long bits_offset, char bit_count);
 void addTwoFrames(bool* frame1, bool* diff_frame);
 
-const unsigned long PROGMEM animation1[]={4UL,1122976480UL,1122976495UL,547758111UL,547758246UL,3625459878UL,3490500620UL,1076678668UL,1587568304UL,1587568288UL,0UL};
+const unsigned long PROGMEM animation1[] = { 2UL,1122976480UL,1122976495UL,3782877215UL,1017642151UL,8570UL };
 
 int LEDPin[] = { A5, A4, 13, 12,
          11, 10, 9, 8,
@@ -74,7 +83,6 @@ void loop() {
       previous_frame = next_frame;
       next_frame = temp;
     }
-    break;
   }
 }
 
@@ -119,37 +127,37 @@ void showFrame(bool* data, unsigned char metadata) {
 
 
 // Returns number of frames in animation
-unsigned long getFrameCount(unsigned long* animation) {
+unsigned long getFrameCount(const unsigned long* animation) {
   return animation[0];
 }
 
 // Reads binary data for frame starting at the binary offset.
 // Returns bits offset for the next frame.
-unsigned long readFrameDataAtOffset_P(unsigned long* animation, unsigned long bits_offset, bool* data, unsigned char* metadata) {
-  unsigned long* start = animation + 1; // Jump over first number
+unsigned long readFrameDataAtOffset_P(const unsigned long* animation, unsigned long bits_offset, bool* data, unsigned char* metadata) {
+  const unsigned long* start = animation + 1; // Jump over first number
   unsigned long frame_bits_count = 0;
 
   while (true) {
-    unsigned char compressed_block_size;
+    unsigned long block_size;
 
-    compressed_block_size = readNumber_P(start, bits_offset, BLOCK_SIZE);
+    block_size = readNumber_P(start, bits_offset, BLOCK_SIZE);
     bits_offset += BLOCK_SIZE;
 
-    if (compressed_block_size != 0) {
+    if (block_size != 0) {
       // This block was compressed
       bool bit_value = readNumber_P(start, bits_offset++, 1);
+      frame_bits_count += block_size;
 
-      for (unsigned char i = 0; i < compressed_block_size; i++) {
+      for (unsigned char i = 0; i < block_size; i++) {
         *(data++) = bit_value;
-        frame_bits_count++;
       }
     } else {
       // This block was not compressed. Read raw data
-      unsigned long uncompressed_block_size = CUBESIZE * CUBESIZE * CUBESIZE - frame_bits_count;
+      block_size = CUBESIZE * CUBESIZE * CUBESIZE - frame_bits_count;
+      frame_bits_count += block_size;
 
-      for (unsigned long i = 0; i < uncompressed_block_size; i++) {
+      for (unsigned long i = 0; i < block_size; i++) {
         *(data++) = readNumber_P(start, bits_offset++, 1);
-        frame_bits_count++;
       }
     }
 
@@ -164,30 +172,30 @@ unsigned long readFrameDataAtOffset_P(unsigned long* animation, unsigned long bi
 }
 
 // Returns bits offset for the next frame.
-unsigned long getFrameOffset_P(unsigned long* animation, unsigned long frame_id) {
-  unsigned long* start = animation + 1; // Jump over first number
+unsigned long getFrameOffset_P(const unsigned long* animation, unsigned long frame_id) {
+  const unsigned long* start = animation + 1; // Jump over first number
   unsigned long bits_offset = 0;
   unsigned long frame_bits_count = 0;
   unsigned long current_frame_id = 0;
 
   while (true) {
-    unsigned char compressed_block_size;
+    unsigned long block_size;
 
     if (current_frame_id == frame_id) break;
 
-    compressed_block_size = readNumber_P(start, bits_offset, BLOCK_SIZE);
+    block_size = readNumber_P(start, bits_offset, BLOCK_SIZE);
     bits_offset += BLOCK_SIZE;
 
-    if (compressed_block_size != 0) {
+    if (block_size != 0) {
       // This block was compressed
       bool bit_value = readNumber_P(start, bits_offset++, 1);
-      frame_bits_count += compressed_block_size;
+      frame_bits_count += block_size;
     } else {
       // This block was not compressed. Read raw data
-      unsigned long uncompressed_block_size = CUBESIZE * CUBESIZE * CUBESIZE - frame_bits_count;
+      block_size = CUBESIZE * CUBESIZE * CUBESIZE - frame_bits_count;
+      frame_bits_count += block_size;
 
-      bits_offset += uncompressed_block_size;
-      frame_bits_count += uncompressed_block_size;
+      bits_offset += block_size;
     }
 
     if (frame_bits_count == CUBESIZE * CUBESIZE * CUBESIZE) {
@@ -202,9 +210,9 @@ unsigned long getFrameOffset_P(unsigned long* animation, unsigned long frame_id)
 
 // Reads bit_count from arr after bits_offset and returns the number.
 // Little endian
-unsigned long readNumber_P(unsigned long* arr, unsigned long bits_offset, char bit_count) {
+unsigned long readNumber_P(const unsigned long* arr, unsigned long bits_offset, char bit_count) {
   unsigned long dwords_offset = bits_offset / 32;
-  unsigned long* start = arr + dwords_offset;     // Jumps over multiple of dwords
+  const unsigned long* start = arr + dwords_offset;     // Jumps over multiple of dwords
   char remaining_offset_bits = bits_offset % 32;
   unsigned long result = 0;
 
@@ -230,3 +238,30 @@ void addTwoFrames(bool* frame1, bool* diff_frame) {
     diff_frame[i] = frame1[i] ^ diff_frame[i];
   }
 }
+
+
+
+
+#ifdef _WIN32
+string print(bool* data) {
+  string result;
+  for (int row = 0; row < CUBESIZE; row++) {
+    for (int plane = 0; plane < CUBESIZE; plane++) {
+      for (int col = 0; col < CUBESIZE; col++) {
+        bool val = data[plane * CUBESIZE * CUBESIZE + row * CUBESIZE + col];
+        result += val ? "1" : "0";
+        result += " ";
+      }
+      result += "  ";
+    }
+    result += "\n";
+  }
+  return result;
+}
+int main() {
+  setup();
+  loop();
+
+  return 0;
+}
+#endif

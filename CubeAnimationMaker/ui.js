@@ -1,8 +1,9 @@
 function getFrame(sides) {
 	var duration = $("#frame_duration").val();
+	var orientation = $("input[name=orientationradio]:checked").index() / 2;	// index() weirdly returns 0,2 and 4 instead of 0,1,2
 	if (duration == "") duration = "0";
 
-	return { duration: parseInt(duration), state: constructGridState(sides) };
+	return { duration: parseInt(duration), orientation: orientation, state: constructGridState(sides) };
 }
 
 // Returns 2D array with all the states of the pressed buttons

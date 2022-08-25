@@ -1,6 +1,7 @@
 var frame_cursor = 0;			// Slider cursor: 0 means begining of animation
 var animation = {
 	use_frames_subtraction: true,
+	use_block_compression: true,
 	default_duration: 1,		// This is the unit-time. It will be multiplied in arduino code by the true standard frame duration
 	cube_side: 4,
 	frames: []
@@ -17,11 +18,9 @@ $(document).ready(function () {
 	});
 	$("#clear_all").click(function () {
 		$(".grid_cell").removeClass("active");
-		$(".grid_cell").removeAttr("aria-pressed");
 	});
 	$("#set_all").click(function () {
 		$(".grid_cell").addClass("active");
-		$(".grid_cell").attr("aria-pressed", "true");
 	});
 
 
@@ -85,7 +84,8 @@ $(document).ready(function () {
 		$("#compression_ratio_lccg").text(compressionRatioLCCG(animation, compressed_binary) + "%");
 	});
 	$("#settings").click(function () {
-		$("#settings_frame_subtraction").attr("checked", animation.use_frames_subtraction);
+		$("#settings_frame_subtraction").prop("checked", animation.use_frames_subtraction);
+		$("#settings_block_compression").prop("checked", animation.use_block_compression);
 		$("#settings_default_duration").val(animation.default_duration);
 		$("#settings_cube_side").val(animation.cube_side);
 
@@ -93,14 +93,17 @@ $(document).ready(function () {
 	});
 	$("#settings_modal_save").click(function () {
 		var new_frame_subtraction = $("#settings_frame_subtraction").is(':checked');
+		var new_block_compression = $("#settings_block_compression").is(':checked');
 		var new_default_duration = parseInt($("#settings_default_duration").val());
 		var new_cube_sides = parseInt($("#settings_cube_side").val());
 
 		var old_frame_subtraction = animation.use_frames_subtraction;
+		var old_block_compression = animation.use_block_compression;
 		var old_default_duration = animation.default_duration;
 		var old_cube_sides = animation.cube_side;
 
 		animation.use_frames_subtraction = new_frame_subtraction;
+		animation.use_block_compression = new_block_compression;
 		animation.default_duration = new_default_duration;
 
 		if (new_cube_sides != old_cube_sides) {
@@ -159,7 +162,7 @@ function constructPage(animation) {
 
 // Updates the UI based on current data
 function updateUI(sides) {
-	loadCurrentFrame(sides);
+	loadFrame(sides);
 
 	if (isNewFrame()) {
 		// The cursor is over the new frame position
@@ -174,7 +177,7 @@ function updateUI(sides) {
 }
 
 // Modifies the ui according to current frame and animation
-function loadCurrentFrame(sides) {
+function loadFrame(sides) {
 	if (frame_cursor - animation.frames.length > 0) {
 		// This means the cursor is 2 frames too many after the end of the animation
 		// This should not happen
@@ -185,13 +188,14 @@ function loadCurrentFrame(sides) {
 		// The cursor is over the new frame position
 		// Clear ui
 		$("#frame_duration").val(animation.default_duration);
+		$("#orientation_bottom_up").prop("checked", true);
 		$(".grid_cell").removeClass("active");
-		$(".grid_cell").removeAttr("aria-pressed");
 		return;
 	}
 	var frame_data = animation.frames[frame_cursor];
 
 	$("#frame_duration").val(frame_data.duration);
+	$("input[name=orientationradio]:eq(" + frame_data.orientation + ")").prop("checked", true);
 	loadGridState(sides, frame_data.state);
 }
 
@@ -208,11 +212,9 @@ function loadPlaneState(sides, plane, plane_state) {
 
 			// Reset first the cell
 			$(grid_cell).removeClass("active");
-			$(grid_cell).removeAttr("aria-pressed");
 
 			if (plane_state[row_id][col_id]) {
 				$(grid_cell).addClass("active");
-				$(grid_cell).attr("aria-pressed", "true");
 			}
 		}
 	}
