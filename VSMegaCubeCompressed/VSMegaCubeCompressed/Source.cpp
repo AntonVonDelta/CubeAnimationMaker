@@ -17,12 +17,12 @@ using namespace std;
 #define PLANETIME 2000
 // Time unit for all frames (ms).
 // Multiplied by the frame duration to give total time the frame is visible
-#define TIMECONST 500	
+#define TIMECONST 1000	
 
 enum COMPRESSION :unsigned long {
 	NONE = 0,
-	FRAME_SUBTRACTION = 1,
-	BLOCK = 2
+	BLOCK = 1,
+	FRAME_SUBTRACTION = 2
 };
 
 void showFrame(bool* data, unsigned char metadata);
@@ -32,7 +32,7 @@ void addTwoFrames(bool* frame1, bool* diff_frame);
 unsigned long getFrameCount(const unsigned long* animation);
 COMPRESSION getCompression(const unsigned long* animation);
 
-const unsigned long PROGMEM animation1[] = { 2UL,1122976480UL,1122976495UL,3782877215UL,1017642151UL,8570UL };
+const unsigned long PROGMEM animation1[] = { 4UL,2UL,4096717870UL,4096717870UL,2787157537UL,2787157536UL,2711754784UL,2174880281UL,1261634619UL,885965764UL,63488UL };
 
 int LEDPin[] = { A5, A4, 13, 12,
 				 11, 10, 9, 8,
@@ -71,7 +71,7 @@ void loop() {
 
 		for (unsigned long frame_id = 0; frame_id < frames_count; frame_id++) {
 			bits_offset = readFrameDataAtOffset_P(animation1, bits_offset, next_frame, &metadata);
-
+			
 			if (frame_id != 0 && (compression_algo & COMPRESSION::FRAME_SUBTRACTION)) {
 				// Reconstruct the next frame from the previous one
 				addTwoFrames(previous_frame, next_frame);
@@ -79,15 +79,16 @@ void loop() {
 
 			unsigned long start_time = millis();
 			unsigned long duration = (unsigned long)metadata * TIMECONST;
-			while (millis() - start_time < duration) {
+			//while (millis() - start_time < duration) {
 				showFrame(next_frame, metadata);
-			}
+			//}
 
 			// Swap buffers
 			bool* temp = previous_frame;
 			previous_frame = next_frame;
 			next_frame = temp;
 		}
+		break;
 	}
 }
 
@@ -141,6 +142,9 @@ unsigned long readFrameDataAtOffset_P(const unsigned long* animation, unsigned l
 		for (unsigned long i = 0; i < CUBESIZE * CUBESIZE * CUBESIZE; i++) {
 			*(data++) = readNumber_P(start, bits_offset++, 1);
 		}
+
+		*metadata = readNumber_P(start, bits_offset, META_SIZE);
+		bits_offset += META_SIZE;
 	} else {
 		while (true) {
 			unsigned long block_size;
