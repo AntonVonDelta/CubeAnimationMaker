@@ -10,3 +10,13 @@
 	border-top-right-radius: .25rem;
 	border: solid 1px #dee2e6;
 }
+
+.disable_hover.btn:hover {
+	background-color: transparent;
+	color:#212529;
+}
+
+.active.disable_hover.btn:hover {
+	background-color: #6c757d;
+	color:white;
+}

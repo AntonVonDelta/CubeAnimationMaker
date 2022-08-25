@@ -22,7 +22,7 @@ unsigned long getFrameOffset_P(unsigned long* animation, unsigned long frame_id)
 unsigned long readNumber_P(unsigned long* arr, unsigned long bits_offset, char bit_count);
 void addTwoFrames(bool* frame1, bool* diff_frame);
 
-const unsigned long PROGMEM animation1[] = { 3UL,49790452UL,3422678909UL,1108360224UL,1711276040UL,16UL };
+const unsigned long PROGMEM animation1[] = { 4UL,1122976480UL,1122976495UL,547758111UL,547758246UL,2717917350UL,2719588889UL,2153357849UL,3175398724UL,3175398724UL,0UL };
 
 int LEDPin[] = { A5, A4, 13, 12,
 				 11, 10, 9, 8,
