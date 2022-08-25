@@ -44,7 +44,7 @@ function compressWithMetadata(animation) {
 
 	for (var i = 0; i < animation.frames.length; i++) {
 		// Add metadata to compressed frame
-		var metadata = animation[i].duration;
+		var metadata = animation.frames[i].duration;
 		result.push(compressed_binary[i].concat(intToBitArray(metadata, metadata_size_bits)));
 
 		if (debug) {
@@ -62,12 +62,12 @@ function compressWithMetadata(animation) {
 function compress(animation) {
 	if (animation.frames.length == 0) return [];
 
-	var compressed_between_frames = [flattenPlane(animation[0])];
+	var compressed_between_frames = [flattenPlane(animation.frames[0])];
 	for (var i = 1; i < animation.frames.length; i++) {
 		if (animation.use_frames_subtraction) {
-			compressed_between_frames.push(compressConsecutiveFrames(flattenPlane(animation[i - 1]), flattenPlane(animation[i])));
+			compressed_between_frames.push(compressConsecutiveFrames(flattenPlane(animation.frames[i - 1]), flattenPlane(animation.frames[i])));
 		} else {
-			compressed_between_frames.push(flattenPlane(animation[i]));
+			compressed_between_frames.push(flattenPlane(animation.frames[i]));
 		}
 	}
 
