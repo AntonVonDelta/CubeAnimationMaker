@@ -73,7 +73,7 @@ $(document).ready(function () {
 		var formatted_list = condensed_dwords.map(x => x + "UL");
 		var result = "const unsigned long PROGMEM animation[]={" + formatted_list.join() + "};";
 
-		console.log(compressed_binary);
+		console.log("Compressed binary",compressed_binary);
 
 		$("#output").val(result);
 		$("#compression_ratio").text(compressionRatio(cube_side, animation, compressed_binary) + "%");

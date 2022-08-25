@@ -8,6 +8,8 @@
 #define A3 103
 #define A4 104
 #define A5 105
+#define HIGH true
+#define LOW false
 
 #define pinMode(a,b);
 #define pgm_read_dword(address_short) *address_short

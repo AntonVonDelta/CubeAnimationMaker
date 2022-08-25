@@ -2,10 +2,14 @@
 
 #define CUBESIZE 4UL
 #define PLANESIZE CUBESIZE*CUBESIZE
-#define PLANETIME 2000 // time each plane is displayed in us -> 100 Hz refresh
-#define TIMECONST 50// multiplies DisplayTime to get ms - why not =100?
 #define BLOCK_SIZE 4  // Compression block size
 #define META_SIZE 5   // Metadata size
+// Time duration of drawing a plane in one frame (us).
+#define PLANETIME 2000
+// Time unit for all frames (ms).
+// Multiplied by the frame duration to give total time the frame is visible
+#define TIMECONST 500 
+
 
 void showFrame(bool* data, unsigned char metadata);
 unsigned long getFrameCount(unsigned long* animation);
@@ -14,21 +18,27 @@ unsigned long getFrameOffset_P(unsigned long* animation, unsigned long frame_id)
 unsigned long readNumber_P(unsigned long* arr, unsigned long bits_offset, char bit_count);
 void addTwoFrames(bool* frame1, bool* diff_frame);
 
-const unsigned long PROGMEM animation1[] = { 2UL,3740779601UL,4156838227UL,736525340UL };
+const unsigned long PROGMEM animation1[] = { 3UL,49790452UL,3422678909UL,1108360224UL,1711276040UL,16UL };
 
-int LEDPin[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, A4, A5 };
+int LEDPin[] = { A5, A4, 13, 12,
+         11, 10, 9, 8,
+         7, 6, 5, 4,
+         3, 2, 1, 0 };
 int PlanePin[] = { A0, A1, A2, A3 };
 
-void setup() {
-  Serial.begin(9600);
 
-  // set up LED pins as output (active HIGH)
+void setup() {
+  // DO NOT USE SERIAL BECAUSE PINS 0 AND 1 ARE USED FOR LEDS
+
+  // Set up LED pins as output (active HIGH)
   for (int pin = 0; pin < PLANESIZE; pin++) {
     pinMode(LEDPin[pin], OUTPUT);
+    digitalWrite(LEDPin[pin], LOW);
   }
-  // set up plane pins as outputs (active LOW)
+  // Set up plane pins as outputs (active LOW)
   for (int pin = 0; pin < CUBESIZE; pin++) {
     pinMode(PlanePin[pin], OUTPUT);
+    digitalWrite(PlanePin[pin], LOW);
   }
 }
 
@@ -64,6 +74,7 @@ void loop() {
       previous_frame = next_frame;
       next_frame = temp;
     }
+    break;
   }
 }
 
@@ -72,8 +83,7 @@ void showFrame(bool* data, unsigned char metadata) {
     // Turn previous plane off
     if (plane == 0) {
       digitalWrite(PlanePin[CUBESIZE - 1], LOW);
-    }
-    else {
+    } else {
       digitalWrite(PlanePin[plane - 1], LOW);
     }
 
@@ -82,7 +92,7 @@ void showFrame(bool* data, unsigned char metadata) {
     for (int ledrow = 0; ledrow < CUBESIZE; ledrow++) {
       for (int ledcol = 0; ledcol < CUBESIZE; ledcol++) {
         unsigned long index = (unsigned long)plane * CUBESIZE * CUBESIZE + ledrow * CUBESIZE + ledcol;
-        digitalWrite(LEDPin[ledpin++], data[index]);
+        digitalWrite(LEDPin[ledpin++], data[index] ? HIGH : LOW);
       }
     }
 
@@ -94,15 +104,15 @@ void showFrame(bool* data, unsigned char metadata) {
 
   //String result = "";
   //for (int row = 0; row < CUBESIZE; row++) {
-  //    for (int plane = 0; plane < CUBESIZE; plane++) {
-  //        for (int col = 0; col < CUBESIZE; col++) {
-  //            bool val = data[plane * CUBESIZE * CUBESIZE + row * CUBESIZE + col];
-  //            result += val ? "1" : "0";
-  //            result += " ";
-  //        }
-  //        result += "  ";
+  //  for (int plane = 0; plane < CUBESIZE; plane++) {
+  //    for (int col = 0; col < CUBESIZE; col++) {
+  //      bool val = data[plane * CUBESIZE * CUBESIZE + row * CUBESIZE + col];
+  //      result += val ? "1" : "0";
+  //      result += " ";
   //    }
-  //    result += "\n";
+  //    result += "  ";
+  //  }
+  //  result += "\n";
   //}
   //Serial.println(result);
 }
@@ -133,8 +143,7 @@ unsigned long readFrameDataAtOffset_P(unsigned long* animation, unsigned long bi
         *(data++) = bit_value;
         frame_bits_count++;
       }
-    }
-    else {
+    } else {
       // This block was not compressed. Read raw data
       unsigned long uncompressed_block_size = CUBESIZE * CUBESIZE * CUBESIZE - frame_bits_count;
 
@@ -173,8 +182,7 @@ unsigned long getFrameOffset_P(unsigned long* animation, unsigned long frame_id)
       // This block was compressed
       bool bit_value = readNumber_P(start, bits_offset++, 1);
       frame_bits_count += compressed_block_size;
-    }
-    else {
+    } else {
       // This block was not compressed. Read raw data
       unsigned long uncompressed_block_size = CUBESIZE * CUBESIZE * CUBESIZE - frame_bits_count;
 
@@ -207,8 +215,7 @@ unsigned long readNumber_P(unsigned long* arr, unsigned long bits_offset, char b
     start += 1;
 
     result += (pgm_read_dword(start) & mask) << (32 - remaining_offset_bits);
-  }
-  else  result = pgm_read_dword(start);
+  } else  result = pgm_read_dword(start);
 
   // Truncate at bit_count size only if not already 32bits
   if (bit_count == 32) return result;

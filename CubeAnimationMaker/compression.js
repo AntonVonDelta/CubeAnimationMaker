@@ -1,5 +1,5 @@
 var use_between_frames_compression = true;
-var debug = true;
+const debug = true;
 
 // How many bits describe the compression block. This sets the max size of a compression block = 2^n-1
 // Max 8bits. Max compression block 255bits (we loose the value 0)
