@@ -75,7 +75,7 @@ $(document).ready(function () {
 
 		console.log(compressed_binary);
 
-		$("#output").text(result);
+		$("#output").val(result);
 		$("#compression_ratio").text(compressionRatio(cube_side, animation, compressed_binary) + "%");
 		$("#compression_ratio_lccg").text(compressionRatioLCCG(cube_side, animation, compressed_binary) + "%");
 	});

@@ -68,7 +68,7 @@ void loop() {
 }
 
 void showFrame(bool* data, unsigned char metadata) {
-  for (char plane = 0; plane < CUBESIZE; plane++) {
+  for (int plane = 0; plane < CUBESIZE; plane++) {
     // Turn previous plane off
     if (plane == 0) {
       digitalWrite(PlanePin[CUBESIZE - 1], LOW);
