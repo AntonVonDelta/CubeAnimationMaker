@@ -1,10 +1,6 @@
-#ifndef _WIN32
-#include <avr/pgmspace.h> // allows use of PROGMEM to store patterns in flash
-#else
+#pragma once
+#ifdef _WIN32
 #include "arduino_util.h"
-#include <iostream>
-
-using namespace std;
 #endif
 
 #define CUBESIZE 4UL
@@ -17,7 +13,7 @@ using namespace std;
 #define PLANETIME 2000
 // Time unit for all frames (ms).
 // Multiplied by the frame duration to give total time the frame is visible
-#define TIMECONST 1000  
+#define TIMECONST 1000
 
 enum COMPRESSION :unsigned long {
   NONE = 0,
@@ -32,105 +28,6 @@ void addTwoFrames(bool* frame1, bool* diff_frame);
 unsigned long getFrameCount(const unsigned long* animation);
 COMPRESSION getCompression(const unsigned long* animation);
 
-const unsigned long PROGMEM animation1[]={4UL,0UL,4096717870UL,4096717870UL,603857889UL,603857918UL,3731252286UL,4268127709UL,2281670655UL,4160780415UL,34815UL};
-
-int LEDPin[] = { A5, A4, 13, 12,
-         11, 10, 9, 8,
-         7, 6, 5, 4,
-         3, 2, 1, 0 };
-int PlanePin[] = { A0, A1, A2, A3 };
-
-
-void setup() {
-  // DO NOT USE SERIAL BECAUSE PINS 0 AND 1 ARE USED FOR LEDS
-
-  // Set up LED pins as output (active HIGH)
-  for (int pin = 0; pin < PLANESIZE; pin++) {
-    pinMode(LEDPin[pin], OUTPUT);
-    digitalWrite(LEDPin[pin], LOW);
-  }
-  // Set up plane pins as outputs (active LOW)
-  for (int pin = 0; pin < CUBESIZE; pin++) {
-    pinMode(PlanePin[pin], OUTPUT);
-    digitalWrite(PlanePin[pin], LOW);
-  }
-}
-void loop() {
-  unsigned long frames_count = getFrameCount(animation1);
-  COMPRESSION compression_algo = getCompression(animation1);
-  bool buffer_a[CUBESIZE * CUBESIZE * CUBESIZE];
-  bool buffer_b[CUBESIZE * CUBESIZE * CUBESIZE];
-  unsigned char metadata = 0;
-
-  bool* previous_frame = buffer_a;
-  bool* next_frame = buffer_b;
-
-  // Loop over all frames of animation
-  while (true) {
-    unsigned long bits_offset = 0;
-
-    for (unsigned long frame_id = 0; frame_id < frames_count; frame_id++) {
-      bits_offset = readFrameDataAtOffset_P(animation1, bits_offset, next_frame, &metadata);
-      
-      if (frame_id != 0 && (compression_algo & COMPRESSION::FRAME_SUBTRACTION)) {
-        // Reconstruct the next frame from the previous one
-        addTwoFrames(previous_frame, next_frame);
-      }
-
-      unsigned long start_time = millis();
-      unsigned long duration = (unsigned long)metadata * TIMECONST;
-      while (millis() - start_time < duration) {
-        showFrame(next_frame, metadata);
-      }
-
-      // Swap buffers
-      bool* temp = previous_frame;
-      previous_frame = next_frame;
-      next_frame = temp;
-    }
-    break;
-  }
-}
-
-
-void showFrame(bool* data, unsigned char metadata) {
-  for (int plane = 0; plane < CUBESIZE; plane++) {
-    // Turn previous plane off
-    if (plane == 0) {
-      digitalWrite(PlanePin[CUBESIZE - 1], LOW);
-    } else {
-      digitalWrite(PlanePin[plane - 1], LOW);
-    }
-
-    // Load current plane pattern data into ports
-    int ledpin = 0;
-    for (int ledrow = 0; ledrow < CUBESIZE; ledrow++) {
-      for (int ledcol = 0; ledcol < CUBESIZE; ledcol++) {
-        unsigned long index = (unsigned long)plane * CUBESIZE * CUBESIZE + ledrow * CUBESIZE + ledcol;
-        digitalWrite(LEDPin[ledpin++], data[index] ? HIGH : LOW);
-      }
-    }
-
-    // Turn current plane on
-    digitalWrite(PlanePin[plane], HIGH);
-    // Delay PLANETIME us
-    delayMicroseconds(PLANETIME);
-  }
-
-  //String result = "";
-  //for (int row = 0; row < CUBESIZE; row++) {
-  //  for (int plane = 0; plane < CUBESIZE; plane++) {
-  //    for (int col = 0; col < CUBESIZE; col++) {
-  //      bool val = data[plane * CUBESIZE * CUBESIZE + row * CUBESIZE + col];
-  //      result += val ? "1" : "0";
-  //      result += " ";
-  //    }
-  //    result += "  ";
-  //  }
-  //  result += "\n";
-  //}
-  //Serial.println(result);
-}
 // Reads binary data for frame starting at the binary offset.
 // Returns bits offset for the next frame.
 unsigned long readFrameDataAtOffset_P(const unsigned long* animation, unsigned long bits_offset, bool* data, unsigned char* metadata) {
@@ -217,28 +114,3 @@ unsigned long getFrameCount(const unsigned long* animation) {
 COMPRESSION getCompression(const unsigned long* animation) {
   return (COMPRESSION)pgm_read_dword(animation + 1);
 }
-
-
-#ifdef _WIN32
-string print(bool* data) {
-  string result;
-  for (int row = 0; row < CUBESIZE; row++) {
-    for (int plane = 0; plane < CUBESIZE; plane++) {
-      for (int col = 0; col < CUBESIZE; col++) {
-        bool val = data[plane * CUBESIZE * CUBESIZE + row * CUBESIZE + col];
-        result += val ? "1" : "0";
-        result += " ";
-      }
-      result += "  ";
-    }
-    result += "\n";
-  }
-  return result;
-}
-int main() {
-  setup();
-  loop();
-
-  return 0;
-}
-#endif

@@ -15,12 +15,18 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Arduino.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="Source.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="arduino_util.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="uncompress.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
