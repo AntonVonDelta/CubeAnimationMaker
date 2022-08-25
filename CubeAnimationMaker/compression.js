@@ -1,5 +1,33 @@
 var use_between_frames_compression = true;
-const debug = true;
+const debug = false;
+
+/* 	Algo ideea:
+		Get the difference between two frames. Many animations share similar consecutive frames.
+		This will reduce all the information in one scene to almost all zeroes.
+		This can then be compressed per frame.
+
+	DWORD = 4 bytes = 32bits
+		AVR GCC 	unsigned long
+		MSVC C++	unsigned int
+
+	Frame data byte format:
+		<compression_block_size_bits> bits = Count
+
+		If Count !=0 then block is compressed:
+			1 bit = the value of the compressed block
+		If Count == 0 then no compression:
+			Rest of bits till the end of frame are not compressed
+
+			Reason: no benefit gained from compression (possible if the displayed pattern Chess-like)
+			Read the data uncompressed till end of frame.
+		<metadata_size_bits> bits = metadata
+
+	Animation data byte format:
+		1 dword = frames count
+		1 dword = animation metadata
+		rest of dwords = frames data
+
+*/
 
 // How many bits describe the compression block. This sets the max size of a compression block = 2^n-1
 // Max 8bits. Max compression block 255bits (we loose the value 0)
@@ -16,6 +44,7 @@ function compressWithMetadata(animation) {
 	var bits_offset = 0;
 
 	for (var i = 0; i < animation.length; i++) {
+		// Add metadata to compressed frame
 		var metadata = animation[i].duration;
 		result.push(compressed_binary[i].concat(intToBitArray(metadata, metadata_size_bits)));
 
@@ -24,6 +53,8 @@ function compressWithMetadata(animation) {
 			bits_offset += result.at(-1).length;
 		}
 	}
+
+	// Add metadata to animation
 	return intToBitArray(animation.length, 32).concat(result);
 }
 

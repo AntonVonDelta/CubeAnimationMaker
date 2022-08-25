@@ -5,21 +5,6 @@ var animation = [];
 
 
 $(document).ready(function () {
-	/* 	Algo ideea:
-			Get the difference between two frames. Many animations share similar consecutive frames.
-			This will reduce all the information in one scene to almost all zeroes.
-			This can then be compressed per frame.
-	
-			
-		Byte format C++ (4bytes long):
-			Count = 4 bits: 	how many times the next bit repeats
-			Value =	1 bit: 		the value of the leds
-			
-			Special case if Count==0:
-				no benefit gained from compression (possible if the displayed pattern is like Chess)
-				read the data uncompressed till end of frame.
-	*/
-
 	// Generate the grid
 	$("#grid").html(generateGrid(cube_side));
 
