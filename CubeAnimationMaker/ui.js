@@ -5,7 +5,7 @@ function getFrame(sides) {
 	return { duration: parseInt(duration), state: constructGridState(sides) };
 }
 
-// Returns 2d array with all the states of the pressed buttons
+// Returns 2D array with all the states of the pressed buttons
 function constructGridState(sides) {
 	var result = [];
 

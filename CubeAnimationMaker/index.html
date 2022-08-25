@@ -25,8 +25,19 @@
 
 		</div>
 
+
 		<div class="btn-toolbar mt-4" role="toolbar">
-			<div class="input-group input-group-sm">
+			<div class="btn-group btn-group-sm me-2" role="group" aria-label="Basic radio toggle button group">
+				<input type="radio" class="btn-check" name="btnradio" id="btnradio1" autocomplete="off" checked>
+				<label class="btn btn-outline-primary" for="btnradio1">Bottom-Top</label>
+
+				<input type="radio" class="btn-check" name="btnradio" id="btnradio2" autocomplete="off">
+				<label class="btn btn-outline-primary" for="btnradio2">Back-Front</label>
+
+				<input type="radio" class="btn-check" name="btnradio" id="btnradio3" autocomplete="off">
+				<label class="btn btn-outline-primary" for="btnradio3">Left-Right</label>
+			</div>
+			<div class="input-group input-group-sm me-3">
 				<div class="input-group-text">Duration</div>
 				<input type="text" class="form-control" id="frame_duration">
 			</div>
@@ -62,6 +73,7 @@
 		<div class="btn-toolbar mt-5" role="toolbar">
 			<div class="btn-group me-2" role="group">
 				<button id="generate_compress" type="button" class="btn btn-success">Generate and Compress</button>
+				<button id="settings" type="button" class="btn btn-outline-secondary">Settings</button>
 			</div>
 		</div>
 		<div class="form-floating mt-1">
@@ -87,6 +99,36 @@
 
 
 	<!-- Modals -->
+	<div class="modal" tabindex="-1" id="settings_modal">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">Settings</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<div class="form-check mb-3">
+						<input class="form-check-input" type="checkbox" id="settings_frame_subtraction">
+						<label class="form-check-label" for="settings_frame_subtraction">
+							Use frame subtraction
+						</label>
+					</div>
+					<div class="input-group mb-3">
+						<span class="input-group-text">Default duration:</span>
+						<input type="text" class="form-control" id="settings_default_duration">
+					</div>
+					<div class="input-group mb-3">
+						<span class="input-group-text">Cube side length:</span>
+						<input type="text" class="form-control" id="settings_cube_side">
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+					<button type="button" class="btn btn-primary" id="settings_modal_save">Save changes</button>
+				</div>
+			</div>
+		</div>
+	</div>
 	<div class="modal" tabindex="-1" id="download_modal">
 		<div class="modal-dialog">
 			<div class="modal-content">
@@ -104,7 +146,6 @@
 			</div>
 		</div>
 	</div>
-
 	<div class="modal" tabindex="-1" id="load_modal">
 		<div class="modal-dialog">
 			<div class="modal-content">
@@ -129,7 +170,7 @@
 
 	<!-- Templates -->
 	<div class="template" id="template_plane">
-		<div class="d-inline-block me-2" data-plane="%s">
+		<div class="d-inline-block me-2 mb-3" data-plane="%s">
 			%s
 		</div>
 	</div>
@@ -141,7 +182,8 @@
 		</div>
 	</div>
 	<div class="template" id="template_plane_cell">
-		<button type="button" class="btn btn-outline-secondary disable_hover grid_cell" data-row="%s" data-col="%s">%s</button>
+		<button type="button" class="btn btn-outline-secondary disable_hover grid_cell" data-row="%s"
+			data-col="%s">%s</button>
 	</div>
 </body>
 

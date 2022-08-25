@@ -1,4 +1,3 @@
-var use_between_frames_compression = true;
 const debug = false;
 
 /* 	Algo ideea:
@@ -43,7 +42,7 @@ function compressWithMetadata(animation) {
 	var compressed_binary = compress(animation);
 	var bits_offset = 0;
 
-	for (var i = 0; i < animation.length; i++) {
+	for (var i = 0; i < animation.frames.length; i++) {
 		// Add metadata to compressed frame
 		var metadata = animation[i].duration;
 		result.push(compressed_binary[i].concat(intToBitArray(metadata, metadata_size_bits)));
@@ -55,17 +54,17 @@ function compressWithMetadata(animation) {
 	}
 
 	// Add metadata to animation
-	return intToBitArray(animation.length, 32).concat(result);
+	return intToBitArray(animation.frames.length, 32).concat(result);
 }
 
 // Compress all animation frames
 // Returns 2D array for each frame of binary data
 function compress(animation) {
-	if (animation.length == 0) return [];
+	if (animation.frames.length == 0) return [];
 
 	var compressed_between_frames = [flattenPlane(animation[0])];
-	for (var i = 1; i < animation.length; i++) {
-		if (use_between_frames_compression) {
+	for (var i = 1; i < animation.frames.length; i++) {
+		if (animation.use_frames_subtraction) {
 			compressed_between_frames.push(compressConsecutiveFrames(flattenPlane(animation[i - 1]), flattenPlane(animation[i])));
 		} else {
 			compressed_between_frames.push(flattenPlane(animation[i]));
@@ -160,18 +159,20 @@ function flattenPlane(frame) {
 	return frame.state.flat().flat();
 }
 
-function compressionRatio(sides, animation, compressed_binary) {
+function compressionRatio(animation, compressed_binary) {
 	// A good algorithm for displaying the cube would use the same ideea as I did.
 	// It would compactify the numbers into dword numbers to preserve instruction calls.
-	var estimate_binary_uncompressed = animation.length * (sides * sides * sides + metadata_size_bits);
+	var sides = animation.cube_side;
+	var estimate_binary_uncompressed = animation.frames.length * (sides * sides * sides + metadata_size_bits);
 	var estimate_bytes_uncompressed = Math.ceil(estimate_binary_uncompressed / 8);
 	var compressed_bytes = Math.ceil(compressed_binary.length / 8);
 	return (compressed_bytes / estimate_bytes_uncompressed * 100).toFixed(2);
 }
 
-function compressionRatioLCCG(sides, animation, compressed_binary) {
+function compressionRatioLCCG(animation, compressed_binary) {
 	// LCCG is very ineficient. It uses 8bit to store just 4bits at a time.
-	var estimate_binary_uncompressed = animation.length * (sides * sides * 8 + 8);
+	var sides = animation.cube_side;
+	var estimate_binary_uncompressed = animation.frames.length * (sides * sides * 8 + 8);
 	var estimate_bytes_uncompressed = Math.ceil(estimate_binary_uncompressed / 8);
 	var compressed_bytes = Math.ceil(compressed_binary.length / 8);
 	return (compressed_bytes / estimate_bytes_uncompressed * 100).toFixed(2);

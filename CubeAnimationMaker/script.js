@@ -1,15 +1,15 @@
-const cube_side = 4;
-const default_duration = 1;		// This is the unit-time. It will be multiplied in arduino code by the true standard frame duration
 var frame_cursor = 0;			// Slider cursor: 0 means begining of animation
-var animation = [];
+var animation = {
+	use_frames_subtraction: true,
+	default_duration: 1,		// This is the unit-time. It will be multiplied in arduino code by the true standard frame duration
+	cube_side: 4,
+	frames: []
+};
 
 
 $(document).ready(function () {
-	// Generate the grid
-	$("#grid").html(generateGrid(cube_side));
-
 	loadAnimation();
-	updateUI(cube_side);
+	constructPage(animation);
 
 	$(".grid_cell").click(function (e) {
 		$(this).button("toggle");
@@ -27,59 +27,99 @@ $(document).ready(function () {
 
 
 	$("#insert_frame").click(function () {
-		var frame = getFrame(cube_side);
-		animation.splice(frame_cursor, 0, frame);
+		var frame = getFrame(animation.cube_side);
+		animation.frames.splice(frame_cursor, 0, frame);
 		console.log(frame);
 
 		frame_cursor += 1;
 		updateUI();
 	});
 	$("#update_frame").click(function () {
-		if (frame_cursor - animation.length >= 0) {
+		if (isNewFrame()) {
 			alert("Frame #" + frame_id + " doesn't exist");
 			return;
 		}
-		animation.splice(frame_cursor, 1, getFrame(cube_side));
-		updateUI(cube_side);
+		animation.frames.splice(frame_cursor, 1, getFrame(animation.cube_side));
+		updateUI(animation.cube_side);
 	});
 	$("#refresh_frame").click(function () {
-		updateUI(cube_side);
+		updateUI(animation.cube_side);
 	});
 	$("#delete_frame").click(function () {
-		if (frame_cursor - animation.length >= 0) {
+		if (isNewFrame()) {
 			return;
 		}
-		animation.splice(frame_cursor, 1);
-		updateUI(cube_side);
+		animation.frames.splice(frame_cursor, 1);
+		updateUI(animation.cube_side);
 	});
+	$("#seek_frame").click(function () {
+		var frame_id = parseInt($("#seek_frame_id").val());
+		if (isNewFrame(frame_id)) {
+			alert("Frame #" + frame_id + " doesn't exist");
+			return;
+		}
+		frame_cursor = frame_id;
+		updateUI(animation.cube_side);
+	});
+
+
+
+	$("#frame_range").on("input change", function () {
+		var new_value = parseInt($(this).val());
+		frame_cursor = new_value;
+		updateUI(animation.cube_side);
+	});
+
+
+
 	$("#generate_compress").click(function () {
 		var compressed_binary = compressWithMetadata(animation).flat();
 		var condensed_dwords = condenseBinary(compressed_binary);
 		var formatted_list = condensed_dwords.map(x => x + "UL");
 		var result = "const unsigned long PROGMEM animation[]={" + formatted_list.join() + "};";
 
-		console.log("Compressed binary",compressed_binary);
+		console.log("Compressed binary", compressed_binary);
 
 		$("#output").val(result);
-		$("#compression_ratio").text(compressionRatio(cube_side, animation, compressed_binary) + "%");
-		$("#compression_ratio_lccg").text(compressionRatioLCCG(cube_side, animation, compressed_binary) + "%");
+		$("#compression_ratio").text(compressionRatio(animation, compressed_binary) + "%");
+		$("#compression_ratio_lccg").text(compressionRatioLCCG(animation, compressed_binary) + "%");
 	});
-	$("#seek_frame").click(function () {
-		var frame_id = parseInt($("#seek_frame_id").val());
-		if (frame_id - animation.length >= 0) {
-			alert("Frame #" + frame_id + " doesn't exist");
-			return;
+	$("#settings").click(function () {
+		$("#settings_frame_subtraction").attr("checked", animation.use_frames_subtraction);
+		$("#settings_default_duration").val(animation.default_duration);
+		$("#settings_cube_side").val(animation.cube_side);
+
+		$("#settings_modal").modal("show");
+	});
+	$("#settings_modal_save").click(function () {
+		var new_frame_subtraction = $("#settings_frame_subtraction").is(':checked');
+		var new_default_duration = parseInt($("#settings_default_duration").val());
+		var new_cube_sides = parseInt($("#settings_cube_side").val());
+
+		var old_frame_subtraction = animation.use_frames_subtraction;
+		var old_default_duration = animation.default_duration;
+		var old_cube_sides = animation.cube_side;
+
+		animation.use_frames_subtraction = new_frame_subtraction;
+		animation.default_duration = new_default_duration;
+
+		if (new_cube_sides != old_cube_sides) {
+			if (animation.frames.length != 0 && !confirm("You are resetting the cube size. This will delete the current animation. Are you sure?")) {
+				return;
+			}
+
+			clearAnimation();
+			animation.frames = [];
+			animation.cube_side = new_cube_sides;
+			constructPage(animation);
+		} else {
+			// Just update
+			updateUI(animation.cube_side);
 		}
-		frame_cursor = frame_id;
-		updateUI(cube_side);
+
+		$("#settings_modal").modal("hide");
 	});
 
-
-	$("#frame_range").on("input change", function () {
-		var new_value = parseInt($(this).val());
-		frame_cursor = new_value;
-		updateUI(cube_side);
-	});
 
 
 	$("#download_animation").click(function () {
@@ -96,7 +136,7 @@ $(document).ready(function () {
 			frame_cursor = 0;
 
 			saveAnimation();
-			updateUI(cube_side);
+			constructPage(animation);
 			$("#load_modal").modal("hide");
 		} catch (err) {
 			$("#load_modal_error").text(err.message);
@@ -104,45 +144,52 @@ $(document).ready(function () {
 	});
 	$("#clear_animation").click(function () {
 		clearAnimation();
-		animation = [];
+		animation.frames = [];
 		frame_cursor = 0;
-		updateUI(cube_side);
+		updateUI(animation.cube_side);
 	});
 });
+
+function constructPage(animation) {
+	// Generate the grid
+	$("#grid").html(generateGrid(animation.cube_side));
+	frame_cursor = 0;
+	updateUI(animation.cube_side);
+}
 
 // Updates the UI based on current data
 function updateUI(sides) {
 	loadCurrentFrame(sides);
 
-	if (frame_cursor - animation.length == 0) {
+	if (isNewFrame()) {
 		// The cursor is over the new frame position
-		$("#frames_counter").text("Current frame: new / " + (animation.length - 1) + "");
+		$("#frames_counter").text("Current frame: new / " + (animation.frames.length - 1) + "");
 	} else {
-		$("#frames_counter").text("Current frame: " + (frame_cursor) + " / " + (animation.length - 1) + "");
+		$("#frames_counter").text("Current frame: " + (frame_cursor) + " / " + (animation.frames.length - 1) + "");
 	}
 
 	$("#frame_range").attr("min", 0);
-	$("#frame_range").attr("max", animation.length - 1 + 1);	// We actually add a new frame position here to the range. This represents the new frame position
+	$("#frame_range").attr("max", animation.frames.length - 1 + 1);	// We actually add a new frame position here to the range. This represents the new frame position
 	$("#frame_range").val(frame_cursor);
 }
 
 // Modifies the ui according to current frame and animation
 function loadCurrentFrame(sides) {
-	if (frame_cursor - animation.length > 0) {
+	if (frame_cursor - animation.frames.length > 0) {
 		// This means the cursor is 2 frames too many after the end of the animation
 		// This should not happen
 		alert("Error. See logs");
 		throw "Frame cursor points beyond event the new frame position";
 	}
-	if (frame_cursor - animation.length == 0) {
+	if (isNewFrame()) {
 		// The cursor is over the new frame position
 		// Clear ui
-		$("#frame_duration").val(default_duration);
+		$("#frame_duration").val(animation.default_duration);
 		$(".grid_cell").removeClass("active");
 		$(".grid_cell").removeAttr("aria-pressed");
 		return;
 	}
-	var frame_data = animation[frame_cursor];
+	var frame_data = animation.frames[frame_cursor];
 
 	$("#frame_duration").val(frame_data.duration);
 	loadGridState(sides, frame_data.state);
@@ -181,4 +228,12 @@ function loadAnimation() {
 }
 function clearAnimation() {
 	localStorage.clear();
+}
+
+function isNewFrame(frame_id = null) {
+	if (frame_id == null) frame_id = frame_cursor;
+	if (frame_id - animation.frames.length >= 0) {
+		return true;
+	}
+	return false;
 }
