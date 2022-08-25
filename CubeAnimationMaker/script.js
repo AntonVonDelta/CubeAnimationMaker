@@ -43,7 +43,7 @@ $(document).ready(function () {
 		$(this).addClass("active");
 	});
 
-	
+
 
 	$("#insert_frame").click(function () {
 		var frame = getFrame(animation.cube_side);
@@ -144,7 +144,9 @@ $(document).ready(function () {
 	});
 
 
-
+	$("#save_animation").click(function () {
+		saveAnimation();
+	});
 	$("#download_animation").click(function () {
 		$("#download_modal_data").val(JSON.stringify(animation));
 		$("#download_modal").modal("show");
