@@ -9,12 +9,14 @@ var animation = {
 
 
 $(document).ready(function () {
+	var dragging = 0;
+	var start_drag_element = null;
+
 	loadAnimation();
 	constructPage(animation);
 
 	$(".grid_cell").click(function (e) {
 		$(this).button("toggle");
-		console.log($(this).attr("data-col"));
 	});
 	$("#clear_all").click(function () {
 		$(".grid_cell").removeClass("active");
@@ -23,7 +25,25 @@ $(document).ready(function () {
 		$(".grid_cell").addClass("active");
 	});
 
+	// Allow drag-selecting the grid cells
+	$(document).on('mousedown', function () {
+		dragging = 1;
+	}).on('mouseup', function () {
+		if (dragging == 2) {
+			$(start_drag_element).addClass("active");
+		}
+		dragging = 0;
+	});
+	$(".grid_cell").on("mousedown", function (e) {
+		start_drag_element = this;
+	});
+	$(".grid_cell").on("mouseenter", function (e) {
+		if (!dragging) return;
+		dragging = 2;
+		$(this).addClass("active");
+	});
 
+	
 
 	$("#insert_frame").click(function () {
 		var frame = getFrame(animation.cube_side);
