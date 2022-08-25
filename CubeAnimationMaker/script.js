@@ -1,6 +1,6 @@
 const cube_side = 4;
-const default_duration = 10;
-var frame_cursor = 0;	// Slider cursor: 0 means begining of animation
+const default_duration = 1;		// This is the unit-time. It will be multiplied in arduino code by the true standard frame duration
+var frame_cursor = 0;			// Slider cursor: 0 means begining of animation
 var animation = [];
 
 
@@ -71,7 +71,7 @@ $(document).ready(function () {
 		var compressed_binary = compressWithMetadata(animation).flat();
 		var condensed_dwords = condenseBinary(compressed_binary);
 		var formatted_list = condensed_dwords.map(x => x + "UL");
-		var result = "unsigned long animation[]={" + formatted_list.join() + "};";
+		var result = "const unsigned long PROGMEM animation[]={" + formatted_list.join() + "};";
 
 		console.log(compressed_binary);
 
