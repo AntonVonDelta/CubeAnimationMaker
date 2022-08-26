@@ -9,11 +9,11 @@
 #define BLOCK_SIZE 4  
 // Size in bits of frame meta
 #define META_SIZE 5
-// Time duration of drawing a plane in one frame (us).
+// Time duration of drawing a plane in one frame (us). Sets the refresh frequency of the overall frame.
 #define PLANETIME 2000
 // Time unit for all frames (ms).
 // Multiplied by the frame duration to give total time the frame is visible
-#define TIMECONST 1000
+#define TIMECONST 10
 
 enum COMPRESSION :unsigned long {
   NONE = 0,
