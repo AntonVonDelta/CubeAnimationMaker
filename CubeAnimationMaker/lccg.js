@@ -1,8 +1,8 @@
 function getLCCGFrames() {
     // Standardize text
     var text = $("#load_lccg_modal_data").val().replace(/\r\n/g, "\n");
-
-    var lccg_frames = loadLCCG(text);
+    var normalize = $("#load_lccg_modal_normalize").is(":checked");
+    var lccg_frames = loadLCCG(text, normalize);
     var ui_orientation = parseInt($("input[name=orientationradio]:checked").val());
 
     // Set ui_orientation so that the user doesn't have to change it manually after loading
@@ -12,7 +12,7 @@ function getLCCGFrames() {
 
 // Loads LCCG data and returns grid state array.
 // Throws error if text not formatted properly
-function loadLCCG(text) {
+function loadLCCG(text, normalize) {
     var result = [];
     var format_check_result = checkFormat(text);
     if (format_check_result != null) {
@@ -38,6 +38,12 @@ function loadLCCG(text) {
             frame_data.push(rows);
         }
 
+        if (duration > Math.pow(2, metadata_size_bits) - 1) {
+            if (!normalize) throw { message: "Duration is exceeding metadata_size_bits." };
+            else {
+                duration = Math.pow(2, metadata_size_bits) - 1;
+            }
+        }
         result.push({ duration: duration, state: frame_data });
     }
 

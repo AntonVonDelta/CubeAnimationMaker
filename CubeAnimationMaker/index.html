@@ -223,6 +223,13 @@
 						in the LCCG grid.</p>
 					<textarea id="load_lccg_modal_data" class="form-control" style="height: 400px"></textarea>
 					<span class="text-danger" id="load_lccg_modal_error"></span>
+
+					<p class="mt-3">Normalize the data instead of throwing error. For example reduce frame delays to fit
+						metadata
+						bits.</p>
+					<input type="checkbox" class="btn-check" id="load_lccg_modal_normalize" value="0"
+						autocomplete="off">
+					<label class="btn btn-outline-primary" for="load_lccg_modal_normalize">Normalize</label>
 				</div>
 				<div class="modal-footer">
 					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
