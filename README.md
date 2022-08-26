@@ -13,5 +13,6 @@ The compression algorithm is as follows:
  - The constants can be altered easily in code including
    - Length of cube side.
    - Number of bits used for representing compression block size.
+   - Metadata of each frame (duration)
    
 ![image](https://user-images.githubusercontent.com/25268629/186967677-5b2e3de8-5182-46b7-813f-381c692ada09.png)
