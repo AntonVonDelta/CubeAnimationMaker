@@ -161,34 +161,43 @@ function condenseBinary(arr) {
 	return result;
 }
 
-// Flattens the planes XcolsXrowsX1bit structure
-// Also applies orientation to array
+// Aapplies orientation to frame structure
+// Returns the flatten the planes XcolsXrowsX1bit structure
 function getOrientedFrameData(sides, frame) {
-	return applyOrientation(sides, frame.orientation, frame.state.flat().flat());
+	return applyOrientation(sides, frame.orientation, frame.state).flat().flat();
 }
 
-// Apply orientation to the frame data
-function applyOrientation(sides, orientation, flat_state) {
+// Apply orientation to the frame data.
+// Keeps grid structure of the data
+function applyOrientation(sides, orientation, frame_state) {
 	var result = [];
-	if (orientation == 0) return flat_state;
+	if (orientation == 0) return frame_state;
 	if (orientation == 1) {
 		// Back to front
 		for (var row = sides - 1; row >= 0; row--) {
+			var rows = [];
 			for (var plane = 0; plane < sides; plane++) {
+				var cols = [];
 				for (var col = 0; col < sides; col++) {
-					result.push(flat_state[plane * sides * sides + row * sides + col]);
+					cols.push(frame_state[plane][row][col]);
 				}
+				rows.push(cols);
 			}
+			result.push(rows);
 		}
 	}
 	if (orientation == 2) {
 		// Left to right
 		for (var row = sides - 1; row >= 0; row--) {
+			var rows = [];
 			for (var col = sides - 1; col >= 0; col--) {
+				var cols = [];
 				for (var plane = 0; plane < sides; plane++) {
-					result.push(flat_state[plane * sides * sides + row * sides + col]);
+					cols.push(frame_state[plane][row][col]);
 				}
+				rows.push(cols);
 			}
+			result.push(rows);
 		}
 	}
 	return result;

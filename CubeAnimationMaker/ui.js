@@ -1,6 +1,6 @@
 function getFrame(sides) {
 	var duration = $("#frame_duration").val();
-	var orientation = $("input[name=orientationradio]:checked").index() / 2;	// index() weirdly returns 0,2 and 4 instead of 0,1,2
+	var orientation = parseInt($("input[name=orientationradio]:checked").val());
 	if (duration == "") duration = "0";
 
 	return { duration: parseInt(duration), orientation: orientation, state: constructGridState(sides) };
@@ -30,6 +30,31 @@ function constructPlaneState(sides, plane) {
 	return result;
 }
 
+// Updates the grid with the given state
+function loadGridState(sides, grid_state) {
+	for (var plane_id = 0; plane_id < sides; plane_id++) {
+		var plane = $("div").find("[data-plane=" + plane_id + "]");
+		loadPlaneState(sides, plane, grid_state[plane_id]);
+	}
+}
+function loadPlaneState(sides, plane, plane_state) {
+	for (var row_id = 0; row_id < sides; row_id++) {
+		for (var col_id = 0; col_id < sides; col_id++) {
+			var grid_cell = $(plane).find("[data-row=" + row_id + "]").find("[data-col=" + col_id + "]");
+
+			// Reset first the cell
+			$(grid_cell).removeClass("active");
+
+			if (plane_state[row_id][col_id]) {
+				$(grid_cell).addClass("active");
+			}
+		}
+	}
+}
+
+
+
+// Generates html code for the grid based on given size
 function generateGrid(sides) {
 	var result = "";
 	for (var i = 0; i < sides; i++) {
@@ -37,7 +62,6 @@ function generateGrid(sides) {
 	}
 	return result;
 }
-
 function generatePlane(sides, plane) {
 	var template = $("#template_plane").html();
 	var rows = "";
@@ -49,8 +73,6 @@ function generatePlane(sides, plane) {
 	result = result.replace("%s", rows);
 	return result;
 }
-
-
 function generateRow(sides, plane, row) {
 	var template = $("#template_plane_row").html();
 	var row_cells = "";

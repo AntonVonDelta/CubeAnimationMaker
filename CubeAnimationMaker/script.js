@@ -3,6 +3,7 @@ var animation = {
 	use_frames_subtraction: true,
 	use_block_compression: true,
 	default_duration: 1,		// This is the unit-time. It will be multiplied in arduino code by the true standard frame duration
+	default_orientation: 1,
 	cube_side: 4,
 	frames: []
 };
@@ -13,7 +14,7 @@ $(document).ready(function () {
 	var start_drag_element = null;
 
 	loadAnimation();
-	constructPage(animation);
+	constructPage();
 
 	$(".grid_cell").click(function (e) {
 		$(this).button("toggle");
@@ -47,9 +48,8 @@ $(document).ready(function () {
 
 	$("#insert_frame").click(function () {
 		var frame = getFrame(animation.cube_side);
-		animation.frames.splice(frame_cursor, 0, frame);
-		console.log(frame);
 
+		animation.frames.splice(frame_cursor, 0, frame);
 		frame_cursor += 1;
 		updateUI();
 	});
@@ -59,17 +59,17 @@ $(document).ready(function () {
 			return;
 		}
 		animation.frames.splice(frame_cursor, 1, getFrame(animation.cube_side));
-		updateUI(animation.cube_side);
+		updateUI();
 	});
 	$("#refresh_frame").click(function () {
-		updateUI(animation.cube_side);
+		updateUI();
 	});
 	$("#delete_frame").click(function () {
 		if (isNewFrame()) {
 			return;
 		}
 		animation.frames.splice(frame_cursor, 1);
-		updateUI(animation.cube_side);
+		updateUI();
 	});
 	$("#seek_frame").click(function () {
 		var frame_id = parseInt($("#seek_frame_id").val());
@@ -78,7 +78,7 @@ $(document).ready(function () {
 			return;
 		}
 		frame_cursor = frame_id;
-		updateUI(animation.cube_side);
+		updateUI();
 	});
 
 
@@ -86,7 +86,7 @@ $(document).ready(function () {
 	$("#frame_range").on("input change", function () {
 		var new_value = parseInt($(this).val());
 		frame_cursor = new_value;
-		updateUI(animation.cube_side);
+		updateUI();
 	});
 
 
@@ -97,8 +97,6 @@ $(document).ready(function () {
 		var formatted_list = condensed_dwords.map(x => x + "UL");
 		var result = "const unsigned long PROGMEM animation[]={" + formatted_list.join() + "};";
 
-		console.log("Compressed binary", compressed_binary);
-
 		$("#output").val(result);
 		$("#compression_ratio").text(compressionRatio(animation, compressed_binary) + "%");
 		$("#compression_ratio_lccg").text(compressionRatioLCCG(animation, compressed_binary) + "%");
@@ -107,6 +105,7 @@ $(document).ready(function () {
 		$("#settings_frame_subtraction").prop("checked", animation.use_frames_subtraction);
 		$("#settings_block_compression").prop("checked", animation.use_block_compression);
 		$("#settings_default_duration").val(animation.default_duration);
+		$("input[name=settingsorientationradio][value=" + animation.default_orientation + "]").prop("checked", true);
 		$("#settings_cube_side").val(animation.cube_side);
 
 		$("#settings_modal").modal("show");
@@ -115,16 +114,19 @@ $(document).ready(function () {
 		var new_frame_subtraction = $("#settings_frame_subtraction").is(':checked');
 		var new_block_compression = $("#settings_block_compression").is(':checked');
 		var new_default_duration = parseInt($("#settings_default_duration").val());
+		var new_default_orientation = parseInt(parseInt($("input[name=settingsorientationradio]:checked").val()));
 		var new_cube_sides = parseInt($("#settings_cube_side").val());
 
 		var old_frame_subtraction = animation.use_frames_subtraction;
 		var old_block_compression = animation.use_block_compression;
 		var old_default_duration = animation.default_duration;
+		var old_default_duration = animation.default_orientation;
 		var old_cube_sides = animation.cube_side;
 
 		animation.use_frames_subtraction = new_frame_subtraction;
 		animation.use_block_compression = new_block_compression;
 		animation.default_duration = new_default_duration;
+		animation.default_orientation = new_default_orientation;
 
 		if (new_cube_sides != old_cube_sides) {
 			if (animation.frames.length != 0 && !confirm("You are resetting the cube size. This will delete the current animation. Are you sure?")) {
@@ -134,23 +136,26 @@ $(document).ready(function () {
 			clearAnimation();
 			animation.frames = [];
 			animation.cube_side = new_cube_sides;
-			constructPage(animation);
+			constructPage();
 		} else {
 			// Just update
-			updateUI(animation.cube_side);
+			updateUI();
 		}
 
 		$("#settings_modal").modal("hide");
 	});
 
 
+
 	$("#save_animation").click(function () {
 		saveAnimation();
 	});
+
 	$("#download_animation").click(function () {
 		$("#download_modal_data").val(JSON.stringify(animation));
 		$("#download_modal").modal("show");
 	});
+
 	$("#load_animation").click(function () {
 		$("#load_modal").modal("show");
 		$("#load_modal_error").text("");
@@ -161,30 +166,61 @@ $(document).ready(function () {
 			frame_cursor = 0;
 
 			saveAnimation();
-			constructPage(animation);
+			constructPage();
 			$("#load_modal").modal("hide");
 		} catch (err) {
 			$("#load_modal_error").text(err.message);
 		}
 	});
+	$("#load_modal_data").keyup(function () {
+		// Clear error message if it was shown any
+		$("#load_modal_error").text("");
+	});
+
 	$("#clear_animation").click(function () {
 		clearAnimation();
 		animation.frames = [];
 		frame_cursor = 0;
-		updateUI(animation.cube_side);
+		updateUI();
+	});
+
+	$("#load_lccg").click(function () {
+		if (animation.cube_side != 4) {
+			alert("LCCG can only be loaded for an 4x4 animation. Change cube size.");
+			return;
+		}
+		$("#load_lccg_modal").modal("show");
+		$("#load_lccg_modal_error").text("");
+	});
+	$("#load_lccg_modal_load").click(function () {
+		try {
+			var lccg_frames = getLCCGFrames();
+
+			animation.frames.splice(frame_cursor, 0, ...lccg_frames);
+			frame_cursor += lccg_frames.length;
+			updateUI();
+
+			$("#load_lccg_modal").modal("hide");
+		} catch (err) {
+			$("#load_lccg_modal_error").text(err.message);
+		}
+	});
+	$("#load_lccg_modal_data").keyup(function () {
+		// Clear error message if it was shown any
+		$("#load_lccg_modal_error").text("");
 	});
 });
 
-function constructPage(animation) {
+function constructPage() {
 	// Generate the grid
 	$("#grid").html(generateGrid(animation.cube_side));
 	frame_cursor = 0;
-	updateUI(animation.cube_side);
+	updateUI();
 }
 
 // Updates the UI based on current data
-function updateUI(sides) {
-	loadFrame(sides);
+function updateUI() {
+	loadFrame();
 
 	if (isNewFrame()) {
 		// The cursor is over the new frame position
@@ -199,7 +235,7 @@ function updateUI(sides) {
 }
 
 // Modifies the ui according to current frame and animation
-function loadFrame(sides) {
+function loadFrame() {
 	if (frame_cursor - animation.frames.length > 0) {
 		// This means the cursor is 2 frames too many after the end of the animation
 		// This should not happen
@@ -210,37 +246,18 @@ function loadFrame(sides) {
 		// The cursor is over the new frame position
 		// Clear ui
 		$("#frame_duration").val(animation.default_duration);
-		$("#orientation_bottom_up").prop("checked", true);
+		$("input[name=orientationradio][value=" + animation.default_orientation + "]").prop("checked", true);
 		$(".grid_cell").removeClass("active");
 		return;
 	}
 	var frame_data = animation.frames[frame_cursor];
 
 	$("#frame_duration").val(frame_data.duration);
-	$("input[name=orientationradio]:eq(" + frame_data.orientation + ")").prop("checked", true);
-	loadGridState(sides, frame_data.state);
+	$("input[name=orientationradio][value=" + frame_data.orientation + "]").prop("checked", true);
+	loadGridState(animation.cube_side, frame_data.state);
 }
 
-function loadGridState(sides, grid_state) {
-	for (var plane_id = 0; plane_id < sides; plane_id++) {
-		var plane = $("div").find("[data-plane=" + plane_id + "]");
-		loadPlaneState(sides, plane, grid_state[plane_id]);
-	}
-}
-function loadPlaneState(sides, plane, plane_state) {
-	for (var row_id = 0; row_id < sides; row_id++) {
-		for (var col_id = 0; col_id < sides; col_id++) {
-			var grid_cell = $(plane).find("[data-row=" + row_id + "]").find("[data-col=" + col_id + "]");
 
-			// Reset first the cell
-			$(grid_cell).removeClass("active");
-
-			if (plane_state[row_id][col_id]) {
-				$(grid_cell).addClass("active");
-			}
-		}
-	}
-}
 
 function saveAnimation() {
 	localStorage.setItem("animation", JSON.stringify(animation));
