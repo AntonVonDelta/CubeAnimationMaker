@@ -62,7 +62,6 @@ void loop() {
             previous_frame = next_frame;
             next_frame = temp;
         }
-        break;
     }
 }
 
