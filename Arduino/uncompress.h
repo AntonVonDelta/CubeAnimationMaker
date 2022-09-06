@@ -3,17 +3,15 @@
 #include "arduino_util.h"
 #endif
 
-#define CUBESIZE 4UL
+#define CUBESIZE 4
 #define PLANESIZE CUBESIZE*CUBESIZE
-// Size in bits of compression block size
-#define BLOCK_SIZE 4  
-// Size in bits of frame meta
-#define META_SIZE 5
-// Time duration of drawing a plane in one frame (us). Sets the refresh frequency of the overall frame.
-#define PLANETIME 2000
+#define BLOCK_SIZE 4      // Size in bits of compression block size
+#define META_SIZE 5       // Size in bits of frame meta
+#define PLANETIME 2000      // Time duration of drawing a plane in one frame (us).
 // Time unit for all frames (ms).
-// Multiplied by the frame duration to give total time the frame is visible
+// Multiplied by the frame duration to give total time the frame is visible.
 #define TIMECONST 10
+
 
 enum COMPRESSION :unsigned long {
   NONE = 0,
@@ -28,6 +26,40 @@ void addTwoFrames(bool* frame1, bool* diff_frame);
 unsigned long getFrameCount(const unsigned long* animation);
 COMPRESSION getCompression(const unsigned long* animation);
 
+void playAnimation(const unsigned long* animation, void (*funcShowFrame)(bool* data, unsigned char metadata)) {
+  unsigned long frames_count = getFrameCount(animation);
+  COMPRESSION compression_algo = getCompression(animation);
+  bool buffer_a[CUBESIZE * CUBESIZE * CUBESIZE];
+  bool buffer_b[CUBESIZE * CUBESIZE * CUBESIZE];
+  unsigned char metadata = 0;
+
+  bool* previous_frame = buffer_a;
+  bool* next_frame = buffer_b;
+  unsigned long bits_offset = 0;
+
+  // Loop over all frames of animation
+  for (unsigned long frame_id = 0; frame_id < frames_count; frame_id++) {
+    bits_offset = readFrameDataAtOffset_P(animation, bits_offset, next_frame, &metadata);
+
+    if (frame_id != 0 && (compression_algo & COMPRESSION::FRAME_SUBTRACTION)) {
+      // Reconstruct the next frame from the previous one
+      addTwoFrames(previous_frame, next_frame);
+    }
+
+    unsigned long start_time = millis();
+    unsigned long duration = (unsigned long)metadata * TIMECONST;
+    while (millis() - start_time < duration) {
+      // Call provided callback to show the frame
+      funcShowFrame(next_frame, metadata);
+    }
+
+    // Swap buffers
+    bool* temp = previous_frame;
+    previous_frame = next_frame;
+    next_frame = temp;
+  }
+}
+
 // Reads binary data for frame starting at the binary offset.
 // Returns bits offset for the next frame.
 unsigned long readFrameDataAtOffset_P(const unsigned long* animation, unsigned long bits_offset, bool* data, unsigned char* metadata) {
@@ -39,9 +71,6 @@ unsigned long readFrameDataAtOffset_P(const unsigned long* animation, unsigned l
     for (unsigned long i = 0; i < CUBESIZE * CUBESIZE * CUBESIZE; i++) {
       *(data++) = readNumber_P(start, bits_offset++, 1);
     }
-
-    *metadata = readNumber_P(start, bits_offset, META_SIZE);
-    bits_offset += META_SIZE;
   } else {
     while (true) {
       unsigned long block_size;
@@ -68,16 +97,19 @@ unsigned long readFrameDataAtOffset_P(const unsigned long* animation, unsigned l
       }
 
       if (frame_bits_count == CUBESIZE * CUBESIZE * CUBESIZE) {
-        *metadata = readNumber_P(start, bits_offset, META_SIZE);
-        bits_offset += META_SIZE;
         break;
       }
     }
   }
 
+  // Read frame metadata
+  *metadata = readNumber_P(start, bits_offset, META_SIZE);
+  bits_offset += META_SIZE;
+
   return bits_offset;
 }
-// Reads bit_count from arr after bits_offset and returns the number.
+
+// Reads <bit_count> bits from array starting at <bits_offset> and returns the number.
 // Little endian
 unsigned long readNumber_P(const unsigned long* arr, unsigned long bits_offset, char bit_count) {
   unsigned long dwords_offset = bits_offset / 32;
@@ -99,6 +131,7 @@ unsigned long readNumber_P(const unsigned long* arr, unsigned long bits_offset, 
 
   return result & ((1UL << bit_count) - 1);
 }
+
 // Adds to the parent/previous frame the difference to get the next frame.
 // The result is saved in same memory as the difference.
 void addTwoFrames(bool* frame1, bool* diff_frame) {
