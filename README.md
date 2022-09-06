@@ -16,6 +16,7 @@ The compression algorithm is as follows:
    - Metadata of each frame (duration)
    
 **Notes**:
+- Currently the generated animation (the array) stores the number of frames and the compression used for its generation. All other constants (like cube size, compression block size, frame metadata size, etc.) must be set manually.
 - More details about the compression algorithm and format of the encoded frames is found in file: [CubeAnimationMaker\compression.js](CubeAnimationMaker/compression.js). In this file the constants can be easily changed (don't forget to update the Arduino constants too).
 - The code expects a certain mapping in the Arduino code of the leds to output pins. The first pin defined in the mapping array should be the upper-left led of a plane as it seen from Bottom to Top.
 - Internally in the editor, the frame is first built by starting with the upper-left corner of the first plane and iterating over the columns then over the rows. The process continues with the next plane, etc. After this step the array in inverted according to the selected option. 
