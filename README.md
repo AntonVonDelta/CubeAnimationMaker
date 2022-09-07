@@ -20,7 +20,7 @@ The compression algorithm is as follows:
 - More details about the compression algorithm and format of the encoded frames is found in file: [CubeAnimationMaker\compression.js](CubeAnimationMaker/compression.js). In this file the constants can be easily changed (don't forget to update the Arduino constants too).
 - The code expects a certain mapping in the Arduino code of the leds to output pins. The first pin defined in the mapping array should be the upper-left led of a plane as it seen from Bottom to Top.
 - Internally in the editor, the frame is first built by starting with the upper-left corner of the first plane and iterating over the columns then over the rows. The process continues with the next plane, etc. After this step the array in inverted according to the selected option. 
-- The Arduino code contains `#ifdef WIN32` statements because the code is primarly developed/simulated on Windows and pasted into Arduino. This allows for quick prototyping but some Windows code that isn't compatible with microcontrollers must be pruned.
+- The Arduino code contains `#ifdef WIN32` statements because the code is primarily developed/simulated on Windows and pasted into Arduino. This allows for quick prototyping but some Windows code that isn't compatible with microcontrollers must be pruned.
 
 
 ![image](https://user-images.githubusercontent.com/25268629/186967677-5b2e3de8-5182-46b7-813f-381c692ada09.png)
